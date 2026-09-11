@@ -22,8 +22,8 @@ with autosave, and lossless conversion to and from Roam's native
   `roam/better-excalidraw`, so it follows you across devices.
 - Text containing `[[Page]]`, `#tag` or `((ref))` is a real Roam reference: the
   drawing shows up in that page's linked references. Shift+click such a text in
-  the editor to open it in the sidebar; Cmd/Ctrl+click to close the editor and
-  navigate there.
+  the editor to open it in the sidebar, which appears next to the editor;
+  Cmd/Ctrl+click to close the editor and navigate there.
 
 ## Converting native drawings
 

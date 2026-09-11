@@ -203,6 +203,31 @@ function EditorView({ uid, initial, onSaved, registerClose, registerApi }: Edito
   );
 }
 
+/**
+ * Keeps Roam's right sidebar visible while the Editor is open: the modal
+ * gives up exactly the sidebar's width and follows it as the user resizes or
+ * closes it. Excalidraw re-fits its canvas through its own ResizeObserver.
+ */
+function fitBesideSidebar(container: HTMLElement): () => void {
+  const sidebar = document.getElementById("right-sidebar");
+  if (!sidebar) return () => {};
+  const apply = () => {
+    const width = sidebar.getBoundingClientRect().width;
+    const visible = width > 40 && getComputedStyle(sidebar).display !== "none";
+    container.style.right = visible ? `${Math.round(width)}px` : "";
+    container.classList.toggle("bex-beside-sidebar", visible);
+  };
+  const resize = new ResizeObserver(apply);
+  resize.observe(sidebar);
+  const mutation = new MutationObserver(apply);
+  mutation.observe(sidebar, { attributes: true, attributeFilter: ["style", "class"] });
+  apply();
+  return () => {
+    resize.disconnect();
+    mutation.disconnect();
+  };
+}
+
 export function isEditorOpen(): boolean {
   return active !== null;
 }
@@ -264,6 +289,8 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
     />,
   );
 
+  const unfit = fitBesideSidebar(container);
+
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape" && !event.defaultPrevented && event.target === container) {
       void closeEditor();
@@ -277,6 +304,7 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
     root,
     api: () => editorApi,
     close: async () => {
+      unfit();
       container.removeEventListener("keydown", onKeyDown);
       await flush();
       root.unmount();
