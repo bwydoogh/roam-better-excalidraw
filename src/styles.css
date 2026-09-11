@@ -22,6 +22,7 @@
 .bex-preview.bex-dark { background: #121212; border-color: rgba(255, 255, 255, 0.15); }
 .bex-preview svg {
   display: block;
+  width: auto;
   max-width: 100%;
   max-height: min(100%, var(--bex-max-height));
   height: auto;

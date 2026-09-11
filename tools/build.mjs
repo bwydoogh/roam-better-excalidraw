@@ -9,6 +9,7 @@
 import { build, context } from "esbuild";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -61,6 +62,13 @@ const trimPlugin = {
       return { path: args.path, namespace: "locale-stub" };
     });
     b.onLoad({ filter: /.*/, namespace: "locale-stub" }, () => ({ contents: "export default {};", loader: "js" }));
+    // Excalidraw's dist embeds its own (public) Firebase web config for collab
+    // rooms. We never use collab, and the key trips GitHub secret scanning.
+    b.onLoad({ filter: /@excalidraw\/excalidraw\/dist\/prod\/chunk-[A-Z0-9]+\.js$/ }, async (args) => {
+      const source = await readFile(args.path, "utf8");
+      if (!source.includes("VITE_APP_FIREBASE_CONFIG")) return null;
+      return { contents: source.replace(/VITE_APP_FIREBASE_CONFIG:'[^']*'/, "VITE_APP_FIREBASE_CONFIG:'{}'"), loader: "js" };
+    });
   },
 };
 

@@ -105,14 +105,15 @@ export async function refreshPreview(host: HTMLElement, uid: string): Promise<vo
   }
   // Natural size comes from the export; CSS scales it down (never up) to fit
   // the block width and the max height while keeping the aspect ratio.
-  const width = Number(svg.getAttribute("width")) || 0;
-  const height = Number(svg.getAttribute("height")) || 0;
+  const viewBox = (svg.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
+  const width = Number(svg.getAttribute("width")) || viewBox[2] || 0;
+  const height = Number(svg.getAttribute("height")) || viewBox[3] || 0;
   svg.removeAttribute("width");
   svg.removeAttribute("height");
   if (width && height) {
     if (!svg.getAttribute("viewBox")) svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svg.style.aspectRatio = `${width} / ${height}`;
-    svg.style.width = `${width}px`;
+    svg.style.maxWidth = `min(100%, ${Math.ceil(width)}px)`;
   }
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   host.append(svg);
