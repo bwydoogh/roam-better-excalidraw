@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native drawing, Convert, Text mirror, Preview, Editor, Library, Height override). Use those words in code, comments and commits. Decisions with real trade-offs live in `docs/adr/`.
+Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native drawing, Convert, Text mirror, Preview, Editor, Library, Height override, Width override). Use those words in code, comments and commits. Decisions with real trade-offs live in `docs/adr/`.
 
 ## Commands
 

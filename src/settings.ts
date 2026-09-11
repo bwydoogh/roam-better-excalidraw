@@ -4,18 +4,22 @@ export type ThemeSetting = "auto" | "light" | "dark";
 
 export interface Settings {
   maxPreviewHeight: number;
+  maxPreviewWidth: number;
   theme: ThemeSetting;
   autosaveDelayMs: number;
   langCode: string;
   gridMode: boolean;
+  snapMode: boolean;
 }
 
 const DEFAULTS: Settings = {
   maxPreviewHeight: 500,
+  maxPreviewWidth: 0,
   theme: "auto",
   autosaveDelayMs: 1000,
   langCode: "en",
   gridMode: false,
+  snapMode: false,
 };
 
 let api: ExtensionAPI | null = null;
@@ -30,6 +34,12 @@ export function initSettings(extensionAPI: ExtensionAPI): void {
         name: "Maximum preview height (px)",
         description: "Previews use the drawing's natural height up to this limit. Override per block with {{better-excalidraw: height=400}}.",
         action: { type: "input", placeholder: String(DEFAULTS.maxPreviewHeight) },
+      },
+      {
+        id: "maxPreviewWidth",
+        name: "Maximum preview width (px)",
+        description: "Empty or 0 means the block width. Override per block with {{better-excalidraw: width=400}}.",
+        action: { type: "input", placeholder: "0" },
       },
       {
         id: "theme",
@@ -55,6 +65,12 @@ export function initSettings(extensionAPI: ExtensionAPI): void {
         description: "Open the editor with the grid enabled.",
         action: { type: "switch" },
       },
+      {
+        id: "snapMode",
+        name: "Snap to objects on by default",
+        description: "Open the editor with object snapping enabled. Drawings remember their own toggle afterwards.",
+        action: { type: "switch" },
+      },
     ],
   });
 }
@@ -70,9 +86,11 @@ export function getSettings(): Settings {
   const lang = api?.settings.get("langCode");
   return {
     maxPreviewHeight: number("maxPreviewHeight", DEFAULTS.maxPreviewHeight),
+    maxPreviewWidth: number("maxPreviewWidth", DEFAULTS.maxPreviewWidth),
     theme: theme === "light" || theme === "dark" ? theme : "auto",
     autosaveDelayMs: number("autosaveDelayMs", DEFAULTS.autosaveDelayMs),
     langCode: typeof lang === "string" && lang.trim() ? lang.trim() : DEFAULTS.langCode,
     gridMode: api?.settings.get("gridMode") === true,
+    snapMode: api?.settings.get("snapMode") === true,
   };
 }

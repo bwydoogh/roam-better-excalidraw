@@ -22,10 +22,14 @@ test("detects drawing blocks", () => {
   assert.equal(isNativeDrawingBlock("[[excalidraw]]"), false);
 });
 
-test("parses height override", () => {
+test("parses height and width overrides", () => {
   assert.deepEqual(parseOptions("{{better-excalidraw}}"), {});
   assert.deepEqual(parseOptions("{{better-excalidraw: height=400}}"), { height: 400 });
+  assert.deepEqual(parseOptions("{{better-excalidraw: width=300}}"), { width: 300 });
+  assert.deepEqual(parseOptions("{{better-excalidraw: width=300, height=200}}"), { width: 300, height: 200 });
+  assert.deepEqual(parseOptions("{{better-excalidraw: height=200 width=300}}"), { width: 300, height: 200 });
   assert.deepEqual(parseOptions("{{better-excalidraw:height=abc}}"), {});
+  assert.deepEqual(parseOptions("{{better-excalidraw: width=-5 depth=3}}"), {});
 });
 
 test("builds the mirror in the native format", () => {

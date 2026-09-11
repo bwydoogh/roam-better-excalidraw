@@ -84,10 +84,13 @@ export async function refreshPreview(host: HTMLElement, uid: string): Promise<vo
   const drawing = loadDrawing(uid);
   const theme = resolveTheme();
   const options = parseOptions(blockString(uid));
-  const maxHeight = options.height ?? getSettings().maxPreviewHeight;
+  const settings = getSettings();
+  const maxHeight = options.height ?? settings.maxPreviewHeight;
+  const maxWidth = options.width ?? settings.maxPreviewWidth;
   host.classList.toggle("bex-dark", theme === "dark");
   host.style.setProperty("--bex-max-height", `${maxHeight}px`);
   host.style.height = options.height ? `${options.height}px` : "";
+  host.style.maxWidth = maxWidth > 0 ? `${maxWidth}px` : "";
   let svg: SVGSVGElement | null = null;
   try {
     svg = await renderSvg(uid, drawing, theme);

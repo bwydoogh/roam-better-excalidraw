@@ -11,6 +11,8 @@ const MIRROR_RE = /\s?\{\{-: Text elements in drawing: [\s\S]*?\}\}/;
 export interface DrawingBlockOptions {
   /** Preview height override in px, from `{{better-excalidraw: height=400}}`. */
   height?: number;
+  /** Preview width override in px, from `{{better-excalidraw: width=400}}`. */
+  width?: number;
 }
 
 export function isDrawingBlock(text: string): boolean {
@@ -27,10 +29,9 @@ export function parseOptions(text: string): DrawingBlockOptions {
   if (!match?.[1]) return options;
   for (const part of match[1].split(/[,\s]+/)) {
     const [key, value] = part.split("=");
-    if (key === "height") {
-      const height = Number.parseInt(value ?? "", 10);
-      if (Number.isFinite(height) && height > 0) options.height = height;
-    }
+    if (key !== "height" && key !== "width") continue;
+    const px = Number.parseInt(value ?? "", 10);
+    if (Number.isFinite(px) && px > 0) options[key] = px;
   }
   return options;
 }

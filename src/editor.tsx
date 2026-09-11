@@ -55,11 +55,17 @@ function EditorView({ uid, initial, onSaved, registerClose }: EditorProps) {
     const appState = restoreAppState(initial.appState as never, null);
     return {
       elements: restoreElements(initial.elements as never, null),
-      appState: { ...appState, gridModeEnabled: settings.gridMode || appState.gridModeEnabled, theme, collaborators: new Map() },
+      appState: {
+        ...appState,
+        gridModeEnabled: settings.gridMode || appState.gridModeEnabled,
+        objectsSnapModeEnabled: settings.snapMode || appState.objectsSnapModeEnabled,
+        theme,
+        collaborators: new Map(),
+      },
       files: initial.files as never,
       scrollToContent: true,
     };
-  }, [initial, settings.gridMode, theme]);
+  }, [initial, settings.gridMode, settings.snapMode, theme]);
 
   const persist = async (force: boolean) => {
     const api = apiRef.current;

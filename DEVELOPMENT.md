@@ -85,7 +85,9 @@ and must be walked through every release.
    Excalidraw".
 7. **Existing native drawing.** Convert one of your real `{{[[excalidraw]]}}`
    blocks forward, open it in the Editor, close, convert back. Nothing lost.
-8. **Height override.** `{{better-excalidraw: height=200}}` clamps the Preview.
+8. **Size overrides.** `{{better-excalidraw: height=200}}` clamps the Preview
+   height; `width=300` caps its width; the settings panel's maximum width
+   applies when no override is present.
 9. **Sidebar and refs.** Open the block in the right sidebar and via `((ref))`
    on another page. Each shows a Preview; editing one refreshes all after save.
 10. **Dark theme.** Toggle Roam's theme; Previews re-render in dark mode.

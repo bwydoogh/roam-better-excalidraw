@@ -10,7 +10,8 @@ with autosave, and lossless conversion to and from Roam's native
   drawing here** from the command palette. Click the preview to draw.
 - Text in your drawings is searchable in Roam, exactly like native drawings.
 - Captions, tags and references typed next to the component are preserved.
-- `{{better-excalidraw: height=300}}` fixes the preview height for one block.
+- `{{better-excalidraw: height=300}}` fixes the preview height for one block;
+  `width=400` caps its width. Both can be combined.
 
 ## Converting native drawings
 
@@ -21,8 +22,8 @@ drawing: convert back and Roam renders it again.
 
 ## Settings
 
-Maximum preview height, theme (auto / light / dark), autosave delay, editor
-language, and grid-by-default.
+Maximum preview height and width, theme (auto / light / dark), autosave delay,
+editor language, grid-by-default, and snap-to-objects-by-default.
 
 ## Development
 
