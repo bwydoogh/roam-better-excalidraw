@@ -15,6 +15,9 @@ with autosave, and lossless conversion to and from Roam's native
 
 ## In the editor
 
+- **Escape** saves and closes the editor once there is nothing left for
+  Excalidraw to cancel: the first Escape ends text editing, clears a selection
+  or drops back to the selection tool, the next one closes.
 - **Insert as image** (top bar) uploads a PNG of the drawing to Roam and adds it
   as a child block, handy for sharing or embedding elsewhere.
 - Copy as PNG/SVG and download live in Excalidraw's own export dialog.

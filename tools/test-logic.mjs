@@ -11,6 +11,7 @@ import {
   withMirror,
 } from "../src/blockString.ts";
 import { hasDrawingProps, mergeDrawingProps, readDrawing } from "../src/schema.ts";
+import { escapeClosesEditor } from "../src/editorKeys.ts";
 import { findRoamLinks, textUnderPointer } from "../src/links.ts";
 
 const NATIVE = '{{[[excalidraw]]}} {{-: Text elements in drawing: Gitlab ; Push tag ; start "automated\ndeployment" }}';
@@ -122,4 +123,31 @@ test("textUnderPointer follows a container to its label", () => {
 test("unsupportedNativeTypes flags only live, non-native element types", () => {
   assert.deepEqual(unsupportedNativeTypes([{ type: "rectangle" }, { type: "text" }, { type: "image" }]), []);
   assert.deepEqual(unsupportedNativeTypes([{ type: "stickynote" }, { type: "video" }, { type: "stickynote" }, { type: "document", isDeleted: true }]), ["stickynote", "video"]);
+});
+
+test("escapeClosesEditor only when Excalidraw has nothing to dismiss", () => {
+  const idle = {
+    activeTool: { type: "selection" },
+    preferredSelectionTool: { type: "selection" },
+    selectedElementIds: {},
+    openSidebar: null,
+    openDialog: null,
+    showHyperlinkPopup: false,
+  };
+  assert.equal(escapeClosesEditor(idle, ["a"]), true);
+  assert.equal(escapeClosesEditor({}, []), true);
+  // A selection, a drawing tool or text editing: Escape belongs to Excalidraw.
+  assert.equal(escapeClosesEditor({ ...idle, selectedElementIds: { a: true } }, ["a"]), false);
+  assert.equal(escapeClosesEditor({ ...idle, activeTool: { type: "rectangle" } }, []), false);
+  assert.equal(escapeClosesEditor({ ...idle, editingTextElement: { id: "t" } }, []), false);
+  assert.equal(escapeClosesEditor({ ...idle, openDialog: { name: "help" } }, []), false);
+  assert.equal(escapeClosesEditor({ ...idle, showHyperlinkPopup: "editor" }, []), false);
+  // The lasso as preferred selection tool is the resting tool, not a drawing tool.
+  assert.equal(escapeClosesEditor({ ...idle, activeTool: { type: "lasso" }, preferredSelectionTool: { type: "lasso" } }, []), true);
+  // A stale selection of a deleted element does not block closing.
+  assert.equal(escapeClosesEditor({ ...idle, selectedElementIds: { gone: true } }, ["a"]), true);
+  // Sidebars: search and an undocked Library close on Escape, a docked Library stays.
+  assert.equal(escapeClosesEditor({ ...idle, openSidebar: { name: "default", tab: "search" }, defaultSidebarDockedPreference: true }, []), false);
+  assert.equal(escapeClosesEditor({ ...idle, openSidebar: { name: "default", tab: "library" } }, []), false);
+  assert.equal(escapeClosesEditor({ ...idle, openSidebar: { name: "default", tab: "library" }, defaultSidebarDockedPreference: true }, []), true);
 });

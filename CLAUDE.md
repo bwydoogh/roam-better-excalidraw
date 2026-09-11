@@ -28,6 +28,7 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - `src/editor.tsx` — the modal Editor (Excalidraw React component), debounced autosave, single instance.
 - `src/library.ts` — the Library persisted in props of a block on page `roam/better-excalidraw`.
 - `src/links.ts` — pure: find Roam links in text, resolve the text under the pointer (labelled shapes included). Tested.
+- `src/editorKeys.ts` — pure: whether Escape closes the Editor or belongs to Excalidraw (selection, tool, text editing, menus). Tested.
 - `src/settings.ts`, `src/theme.ts` — settings panel and theme resolution.
 - `src/extension.ts` — onload/onunload, the button observer, command palette.
 - `tools/build.mjs` — esbuild with two plugins: React is rewritten to `window.React` shims (Depot forbids bundling React), and Excalidraw's Mermaid converter plus unused locales are stubbed.
@@ -41,7 +42,7 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - **Custom `{{name}}` components render as an inert `<button class="bp3-button rm-xparser-default-name">`.** The argument (`: height=400`) is not in the DOM; read the block string via the API. The block uid is the last 9 characters of the closest `id^="block-input-"` ancestor.
 - **The MutationObserver must not re-mount.** `upgradeButton` marks the button with `data-bex-mounted`; Roam re-renders blocks freely (edit mode, sidebar, embeds) and each fresh button gets its own Preview host.
 - **Cleanup must be idempotent.** `onload` first calls the module-local `cleanup`, then `window.__betterExcalidrawCleanup` from a previous module instance. Depot dev mode reloads the module without `onunload`.
-- **One Editor at a time.** `openEditor` on a second uid closes the first (flushing its save) and then opens the new one. Escape closes only when the event target is the modal container itself, so Excalidraw's own Escape (deselect) is untouched.
+- **One Editor at a time.** `openEditor` on a second uid closes the first (flushing its save) and then opens the new one. Escape closes the Editor only when `escapeClosesEditor` (`src/editorKeys.ts`) finds nothing for Excalidraw to dismiss; the listener runs in the document's capture phase so it judges the state *before* Excalidraw acts on the key (after it, a just-cleared selection would look idle and one Escape would both deselect and close).
 - **Images never live in props unless an upload failed.** `uploadPendingFiles` runs before every save and rewrites image elements with `customData.firebaseUrl`; `filesToPersist` keeps only the leftovers. Native Roam reads the same `firebaseUrl`, so converted drawings keep their images.
 - **Excalidraw is pinned to a nightly** (`0.18.0-<sha>`, npm `next` tag) because official releases are rare while master ships daily. Nightlies rename props without notice (`excalidrawAPI` became `onExcalidrawAPI`); run `tsc` after every bump. The nightly knows element types native Roam (0.18.0) does not (`stickynote`, `document`, `video`): `unsupportedNativeTypes` warns before Convert-back-to-native.
 - **The font-subsetting Worker is stubbed.** Excalidraw builds its worker from `import.meta.url` of a chunk; inlined into one bundle that would be `extension.js` itself, booting the whole extension inside a Worker. `tools/build.mjs` exports `WorkerUrl = undefined` so Excalidraw subsets on the main thread.
@@ -51,7 +52,7 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 
 ## Testing
 
-`tools/test-logic.mjs` imports `src/blockString.ts` and `src/schema.ts` directly (Node 22 strips types) and covers detection, options, mirror building/splicing, Convert, and props read/merge. Everything that touches Roam's DOM or Excalidraw is browser-only: `DEVELOPMENT.md` has the manual checklist.
+`tools/test-logic.mjs` imports the pure modules (`src/blockString.ts`, `src/schema.ts`, `src/links.ts`, `src/editorKeys.ts`) directly (Node 22 strips types) and covers detection, options, mirror building/splicing, Convert, and props read/merge. Everything that touches Roam's DOM or Excalidraw is browser-only: `DEVELOPMENT.md` has the manual checklist.
 
 ## Release
 

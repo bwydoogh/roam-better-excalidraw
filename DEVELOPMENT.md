@@ -103,7 +103,12 @@ and must be walked through every release.
 4. **Search.** Roam search for `Hello` finds the block; clicking it lands on the
    Preview.
 5. **Close and reopen.** "Save & close", then reopen: the drawing, zoom and
-   scroll position are as you left them. Escape with nothing selected closes too.
+   scroll position are as you left them. Escape closes too, but only once
+   Excalidraw has nothing to cancel: with a shape selected the first Escape
+   deselects and the second closes; while typing in a text element Escape ends
+   the edit; with the rectangle tool active Escape returns to the selection tool;
+   with the help dialog (`?`) open Escape closes just the dialog. Escape while
+   editing a block in Roam's right sidebar leaves the Editor open.
 6. **Convert to native.** Command palette → "Convert back to native
    Excalidraw". Roam's own renderer shows the same drawing. **This step proves
    the props key spelling; if the native drawing is empty, the write spelling is

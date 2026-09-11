@@ -4,6 +4,7 @@ import { Excalidraw, exportToBlob, getSceneVersion, restoreAppState, restoreElem
 import type { ExcalidrawImperativeAPI, PointerDownState } from "@excalidraw/excalidraw/types";
 import { createRoot, type Root } from "react-dom/client";
 import { useEffect, useMemo, useRef } from "react";
+import { escapeClosesEditor, type EscapeState } from "./editorKeys.ts";
 import { filesToPersist, resolveFiles, uploadPendingFiles, type ImageLikeElement } from "./files.ts";
 import { loadLibrary, saveLibrary } from "./library.ts";
 import { findRoamLinks, textUnderPointer } from "./links.ts";
@@ -317,12 +318,27 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
 
   const unfit = fitBesideSidebar(container);
 
+  // Capture phase on the document: runs before Excalidraw's own handler, so
+  // the decision sees the state Escape is about to act on (a selection it
+  // would clear, a tool it would reset) rather than the state after it.
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && !event.defaultPrevented && event.target === container) {
-      void closeEditor();
+    if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+    const target = event.target;
+    // Keys typed in Roam's right sidebar or in Excalidraw's portalled dialogs
+    // and popovers are theirs; only the Editor itself or an unfocused page counts.
+    const inEditor = target instanceof Node && container.contains(target);
+    if (!inEditor && target !== document.body && target !== document.documentElement) return;
+    if (target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select"))) return;
+    const api = editorApi;
+    if (api) {
+      const liveIds = api.getSceneElements().map((element) => element.id);
+      if (!escapeClosesEditor(api.getAppState() as unknown as EscapeState, liveIds)) return;
     }
+    event.preventDefault();
+    event.stopPropagation();
+    void closeEditor();
   };
-  container.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keydown", onKeyDown, true);
 
   active = {
     uid,
@@ -331,7 +347,7 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
     api: () => editorApi,
     close: async () => {
       unfit();
-      container.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown, true);
       await flush();
       root.unmount();
       container.remove();
