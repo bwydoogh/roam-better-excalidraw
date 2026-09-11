@@ -24,7 +24,7 @@ export interface ExtensionAPI {
 }
 
 declare global {
-  /** Short git sha of the build, injected by tools/build.mjs. */
+  /** Short content hash of src/, injected by tools/build.mjs; shown in the editor bar. */
   const __BUILD_STAMP__: string;
   interface Window {
     React: typeof import("react");

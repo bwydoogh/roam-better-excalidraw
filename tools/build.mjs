@@ -7,20 +7,28 @@
 //   node tools/build.mjs --watch   rebuild on change
 //   node tools/build.mjs --check   fail if the committed output has drifted
 import { build, context } from "esbuild";
-import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const mode = process.argv[2] ?? "build";
+// A stamp that identifies the sources, shown in the editor bar so a loaded
+// bundle can be matched to a commit. A content hash (not a git sha) keeps
+// the build deterministic for the --check drift test.
 const buildStamp = (() => {
-  try {
-    return execSync("git rev-parse --short HEAD", { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
-  } catch {
-    return "dev";
-  }
+  const hash = createHash("sha256");
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const path = resolve(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else hash.update(entry.name).update(readFileSync(path));
+    }
+  };
+  walk(resolve(root, "src"));
+  hash.update(readFileSync(resolve(root, "package.json")));
+  return hash.digest("hex").slice(0, 7);
 })();
 
 const SHIMS = {
