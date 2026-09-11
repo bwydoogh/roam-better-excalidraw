@@ -4,6 +4,7 @@
 import "./styles.css";
 import type { ExtensionAPI } from "./roam-types.d.ts";
 import { COMPONENT, isDrawingBlock, isNativeDrawingBlock, toBetterExcalidraw, toNativeExcalidraw, unsupportedNativeTypes } from "./blockString.ts";
+import { closeDrawingIndex, openDrawingIndex } from "./drawingIndex.ts";
 import { closeEditor, openEditor } from "./editor.tsx";
 import { mountPreview, previewClass, refreshAllPreviews, refreshPreviewsFor, sweepPreviews, unmountAllPreviews } from "./preview.ts";
 import { blockString, blockUidFromElement, createChildBlock, focusedBlockUid, loadDrawing, updateBlockString } from "./roam.ts";
@@ -15,6 +16,7 @@ const COMMANDS = {
   open: "Better Excalidraw: Open drawing editor",
   toBetter: "Better Excalidraw: Convert native drawing to Better Excalidraw",
   toNative: "Better Excalidraw: Convert back to native Excalidraw",
+  index: "Better Excalidraw: Show all drawings",
 };
 
 
@@ -108,6 +110,7 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
   palette.addCommand({ label: COMMANDS.open, callback: openFocused });
   palette.addCommand({ label: COMMANDS.toBetter, callback: () => void convertFocused("toBetter") });
   palette.addCommand({ label: COMMANDS.toNative, callback: () => void convertFocused("toNative") });
+  palette.addCommand({ label: COMMANDS.index, callback: () => openDrawingIndex(previewHandlers) });
 
   cleanup = () => {
     observer.disconnect();
@@ -115,6 +118,7 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
     window.clearInterval(sweep);
     for (const label of Object.values(COMMANDS)) palette.removeCommand({ label });
     void closeEditor();
+    closeDrawingIndex();
     unmountAllPreviews();
     document.querySelectorAll<HTMLElement>(`${BUTTON_SELECTOR}[data-bex-mounted]`).forEach((b) => delete b.dataset.bexMounted);
     document.querySelectorAll(`.${previewClass()}`).forEach((n) => n.remove());

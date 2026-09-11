@@ -11,6 +11,7 @@ Glossary for the Roam Depot extension "Better Excalidraw". Terms only, no implem
 - **Text mirror**: the plain-text copy of every text element in a Drawing, kept on the Drawing block so Roam search and backlinks can find the Drawing.
 - **Preview**: the read-only rendering of a Drawing shown inline in the Roam outline.
 - **Editor**: the full Excalidraw editing surface, opened from a Preview.
+- **Drawing index**: a full-screen overview of every Drawing block in the graph as Preview thumbnails, most recently edited first (the roadmap calls it the Canvas-index).
 - **Library**: the user's personal collection of reusable Excalidraw shapes, shared by every Drawing and stored in the graph so it follows the user across devices.
 - **Height override**: a per-Drawing-block setting in the block text that fixes the Preview height instead of the global maximum.
 - **Width override**: a per-Drawing-block setting in the block text that caps the Preview width instead of the global maximum.

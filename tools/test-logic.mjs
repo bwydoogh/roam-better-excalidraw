@@ -2,8 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildMirror,
+  captionOf,
+  drawingIndexEntries,
   isDrawingBlock,
   isNativeDrawingBlock,
+  matchesIndexFilter,
   parseOptions,
   toBetterExcalidraw,
   toNativeExcalidraw,
@@ -122,4 +125,29 @@ test("textUnderPointer follows a container to its label", () => {
 test("unsupportedNativeTypes flags only live, non-native element types", () => {
   assert.deepEqual(unsupportedNativeTypes([{ type: "rectangle" }, { type: "text" }, { type: "image" }]), []);
   assert.deepEqual(unsupportedNativeTypes([{ type: "stickynote" }, { type: "video" }, { type: "stickynote" }, { type: "document", isDeleted: true }]), ["stickynote", "video"]);
+});
+
+test("captionOf keeps only what the user typed next to the component", () => {
+  assert.equal(captionOf("{{better-excalidraw: height=200}} {{-: Text elements in drawing: a ; b }} deploy  #diagram"), "deploy #diagram");
+  assert.equal(captionOf("before {{better-excalidraw}} after"), "before after");
+  assert.equal(captionOf("{{better-excalidraw}}"), "");
+});
+
+test("drawingIndexEntries drops look-alikes and sorts newest first", () => {
+  const row = (uid, text, editTime) => ({ uid, text, pageTitle: "P", pageUid: "p", editTime });
+  const entries = drawingIndexEntries([
+    row("old", "{{better-excalidraw}}", 1),
+    row("fake", "{{better-excalidraw-x}}", 9),
+    row("new", "{{better-excalidraw: width=300}} caption", 5),
+    row("tie", "{{better-excalidraw}}", 1),
+  ]);
+  assert.deepEqual(entries.map((e) => e.uid), ["new", "old", "tie"]);
+});
+
+test("matchesIndexFilter needs every word in the page title or block text", () => {
+  const entry = { uid: "u", text: "{{better-excalidraw}} {{-: Text elements in drawing: Gitlab ; Push tag }}", pageTitle: "Deploy flow", pageUid: "p", editTime: 0 };
+  assert.equal(matchesIndexFilter(entry, ""), true);
+  assert.equal(matchesIndexFilter(entry, "  "), true);
+  assert.equal(matchesIndexFilter(entry, "gitlab deploy"), true);
+  assert.equal(matchesIndexFilter(entry, "gitlab jenkins"), false);
 });

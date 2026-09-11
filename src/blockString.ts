@@ -72,6 +72,36 @@ export function withMirror(text: string, mirror: string): string {
   return `${stripped.slice(0, end)} ${mirror}${stripped.slice(end)}`;
 }
 
+/** What the user typed next to the component: the block text minus the component and the Text mirror. */
+export function captionOf(text: string): string {
+  return text.replace(MIRROR_RE, "").replace(COMPONENT_RE, "").replace(/\s+/g, " ").trim();
+}
+
+/** One Drawing block as listed in the Drawing index. */
+export interface IndexEntry {
+  uid: string;
+  text: string;
+  pageTitle: string;
+  pageUid: string;
+  editTime: number;
+}
+
+/**
+ * Keeps only real Drawing blocks from a substring query (which also matches
+ * look-alikes such as `{{better-excalidraw-x}}`), most recently edited first.
+ */
+export function drawingIndexEntries(rows: IndexEntry[]): IndexEntry[] {
+  return rows
+    .filter((row) => isDrawingBlock(row.text))
+    .sort((a, b) => b.editTime - a.editTime || a.uid.localeCompare(b.uid));
+}
+
+/** Every word of the filter must occur in the page title or the block text (which holds the Text mirror). */
+export function matchesIndexFilter(entry: IndexEntry, filter: string): boolean {
+  const haystack = `${entry.pageTitle} ${entry.text}`.toLowerCase();
+  return filter.toLowerCase().split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
+}
+
 /** `{{[[excalidraw]]}}` → `{{better-excalidraw}}`; everything else untouched. */
 export function toBetterExcalidraw(text: string): string {
   return text.replace(NATIVE_RE, `{{${COMPONENT}}}`);

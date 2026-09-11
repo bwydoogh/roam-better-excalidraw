@@ -219,7 +219,7 @@ function findSidebar(): HTMLElement | null {
   return null;
 }
 
-function fitBesideSidebar(container: HTMLElement): () => void {
+export function fitBesideSidebar(container: HTMLElement): () => void {
   let watched: HTMLElement | null = null;
   let resize: ResizeObserver | null = null;
   const apply = () => {

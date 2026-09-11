@@ -9,6 +9,7 @@ import { getSettings } from "./settings.ts";
 import { resolveTheme } from "./theme.ts";
 
 const CLASS = "bex-preview";
+const THUMB_CLASS = "bex-thumb";
 const cache = new Map<string, { key: string; svg: SVGSVGElement }>();
 const mounted = new Map<string, Set<HTMLElement>>();
 
@@ -73,6 +74,15 @@ export async function mountPreview(host: HTMLElement, uid: string, handlers: Pre
   await refreshPreview(host, uid);
 }
 
+/**
+ * A Preview at thumbnail size, for the Drawing index. It shares the cache,
+ * the pull-watch and the refresh-after-save with the Previews in the outline.
+ */
+export function mountThumbnail(host: HTMLElement, uid: string, handlers: PreviewHandlers): Promise<void> {
+  host.classList.add(THUMB_CLASS);
+  return mountPreview(host, uid, handlers);
+}
+
 const pending = new Map<string, number>();
 function scheduleRefresh(uid: string): void {
   const existing = pending.get(uid);
@@ -86,14 +96,17 @@ function scheduleRefresh(uid: string): void {
 export async function refreshPreview(host: HTMLElement, uid: string): Promise<void> {
   const drawing = loadDrawing(uid);
   const theme = resolveTheme();
-  const options = parseOptions(blockString(uid));
-  const settings = getSettings();
-  const maxHeight = options.height ?? settings.maxPreviewHeight;
-  const maxWidth = options.width ?? settings.maxPreviewWidth;
   host.classList.toggle("bex-dark", theme === "dark");
-  host.style.setProperty("--bex-max-height", `${maxHeight}px`);
-  host.style.height = options.height ? `${options.height}px` : "";
-  host.style.maxWidth = maxWidth > 0 ? `${maxWidth}px` : "";
+  // Thumbnails take their fixed size from CSS; the overrides are for the outline.
+  if (!host.classList.contains(THUMB_CLASS)) {
+    const options = parseOptions(blockString(uid));
+    const settings = getSettings();
+    const maxHeight = options.height ?? settings.maxPreviewHeight;
+    const maxWidth = options.width ?? settings.maxPreviewWidth;
+    host.style.setProperty("--bex-max-height", `${maxHeight}px`);
+    host.style.height = options.height ? `${options.height}px` : "";
+    host.style.maxWidth = maxWidth > 0 ? `${maxWidth}px` : "";
+  }
   let svg: SVGSVGElement | null = null;
   try {
     svg = await renderSvg(uid, drawing, theme);

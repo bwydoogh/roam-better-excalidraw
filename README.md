@@ -10,6 +10,9 @@ with autosave, and lossless conversion to and from Roam's native
   drawing here** from the command palette. Click the preview to draw.
 - Text in your drawings is searchable in Roam, exactly like native drawings.
 - Captions, tags and references typed next to the component are preserved.
+- **Better Excalidraw: Show all drawings** opens a grid of thumbnails of every
+  drawing in the graph, newest first, with a filter on page title and drawing
+  text. Click a thumbnail to edit it, or the page title to go there.
 - `{{better-excalidraw: height=300}}` fixes the preview height for one block;
   `width=400` caps its width. Both can be combined.
 

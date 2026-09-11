@@ -2,7 +2,7 @@
 
 This file provides guidance to Codex when working with code in this repository.
 
-Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native drawing, Convert, Text mirror, Preview, Editor, Library, Height override, Width override). Use those words in code, comments and commits. Decisions with real trade-offs live in `docs/adr/`.
+Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native drawing, Convert, Text mirror, Preview, Editor, Drawing index, Library, Height override, Width override). Use those words in code, comments and commits. Decisions with real trade-offs live in `docs/adr/`.
 
 ## Commands
 
@@ -26,6 +26,7 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - `src/preview.ts` — inline SVG Preview with a per-block cache keyed on a scene fingerprint.
 - `src/files.ts` — images: upload through `roamAlphaAPI.file.upload`, stamp `customData.firebaseUrl` on the image element like native does, fetch back through `file.get`; only files whose upload failed travel inside the block.
 - `src/editor.tsx` — the modal Editor (Excalidraw React component), debounced autosave, single instance.
+- `src/drawingIndex.ts` — the Drawing index: a full-screen grid of Preview thumbnails (`mountThumbnail`, mounted lazily on scroll) for every Drawing block found by `queryDrawingBlocks`, with a filter. The Editor opens on top of it.
 - `src/library.ts` — the Library persisted in props of a block on page `roam/better-excalidraw`.
 - `src/links.ts` — pure: find Roam links in text, resolve the text under the pointer (labelled shapes included). Tested.
 - `src/settings.ts`, `src/theme.ts` — settings panel and theme resolution.

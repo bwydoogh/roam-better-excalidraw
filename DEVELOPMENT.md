@@ -136,6 +136,14 @@ and must be walked through every release.
 17. **Convert-back warning.** Add a sticky note (nightly feature) to a
     drawing, run "Convert back to native Excalidraw": a confirm dialog names
     `stickynote`. Cancel keeps the block untouched.
+18. **Drawing index.** Command palette → "Show all drawings". Every Drawing
+    block shows as a thumbnail, newest edit first; native drawings are not
+    listed. Type a word from a drawing's text or page title in the filter;
+    Escape clears it, a second Escape closes. Click a thumbnail: the Editor
+    opens on top; edit, "Save & close", the thumbnail is updated. Click a
+    page title: the index closes and Roam opens the page; Shift+click opens it
+    in the sidebar next to the index. Scroll a graph with many drawings:
+    thumbnails render as they come into view.
 13. **Fonts offline.** Disconnect from the network, reload Roam, open a drawing
     with hand-drawn text: the Excalifont glyphs render, not a fallback sans.
 

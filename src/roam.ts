@@ -2,7 +2,7 @@
 // the block is pulled fresh right before the transaction.
 import type { RoamPullBlock } from "./roam-types.d.ts";
 import { mergeDrawingProps, readDrawing, type DrawingData } from "./schema.ts";
-import { buildMirror, withMirror, type MirrorSource } from "./blockString.ts";
+import { buildMirror, COMPONENT, withMirror, type IndexEntry, type MirrorSource } from "./blockString.ts";
 
 const PULL_PATTERN = "[:block/uid :block/string :block/props]";
 
@@ -127,6 +127,40 @@ export function pageUidByTitle(title: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Every block whose string mentions the component, with its page and last
+ * edit time. A substring match, so callers filter with `drawingIndexEntries`.
+ */
+export function queryDrawingBlocks(): IndexEntry[] {
+  try {
+    const rows = window.roamAlphaAPI.q(
+      `[:find ?u ?s ?title ?pu ?time
+        :where
+        [?b :block/string ?s]
+        [(clojure.string/includes? ?s "{{${COMPONENT}")]
+        [?b :block/uid ?u]
+        [?b :block/page ?p]
+        [?p :node/title ?title]
+        [?p :block/uid ?pu]
+        [(get-else $ ?b :edit/time 0) ?time]]`,
+    );
+    return rows.map(([uid, text, pageTitle, pageUid, editTime]) => ({
+      uid: String(uid),
+      text: String(text ?? ""),
+      pageTitle: String(pageTitle ?? ""),
+      pageUid: String(pageUid ?? ""),
+      editTime: Number(editTime) || 0,
+    }));
+  } catch (error) {
+    console.warn("[better-excalidraw] drawing query failed", error);
+    return [];
+  }
+}
+
+export function openPageInMainWindow(pageUid: string): void {
+  void window.roamAlphaAPI.ui.mainWindow.openPage({ page: { uid: pageUid } });
 }
 
 export function openInSidebar(uid: string): void {
