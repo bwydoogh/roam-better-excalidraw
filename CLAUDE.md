@@ -43,6 +43,7 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - **One Editor at a time.** `openEditor` on a second uid closes the first (flushing its save) and then opens the new one. Escape closes only when the event target is the modal container itself, so Excalidraw's own Escape (deselect) is untouched.
 - **Images never live in props unless an upload failed.** `uploadPendingFiles` runs before every save and rewrites image elements with `customData.firebaseUrl`; `filesToPersist` keeps only the leftovers. Native Roam reads the same `firebaseUrl`, so converted drawings keep their images.
 - **Fonts are inlined at build time**, not loaded from esm.sh: `tools/build.mjs` replaces Excalidraw's `"./fonts/…woff2"` literals with data URLs (all but the CJK family). `window.EXCALIDRAW_ASSET_PATH` is deliberately unset.
+- **Nothing is saved before the scene is ready.** Excalidraw applies `initialData` asynchronously and fires `onChange` with an empty scene first; with inlined fonts that window can exceed the autosave delay. `sceneReady` flips only once the scene has elements (or the block was empty), and `persist` refuses to write a scene with zero elements over a block that had any: deleting in Excalidraw leaves `isDeleted` markers, so an all-empty scene is always a load failure. This guard exists because a drawing was wiped once; do not remove it.
 - **Autosave skips no-op changes.** `getSceneVersion` gates the debounced save; closing forces one final write so appState (zoom, scroll) lands too.
 
 ## Testing

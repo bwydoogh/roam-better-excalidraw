@@ -98,6 +98,10 @@ function followLink(api: ExcalidrawImperativeAPI, state: PointerDownState, event
 function EditorView({ uid, initial, onSaved, registerClose, registerApi }: EditorProps) {
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const lastSavedVersion = useRef<number>(getSceneVersion(initial.elements as never));
+  // Excalidraw applies initialData asynchronously after mount and fires
+  // onChange with an empty scene in the meantime. Nothing may be saved until
+  // the stored scene has actually been loaded.
+  const sceneReady = useRef<boolean>(initial.elements.length === 0);
   const timer = useRef<number | null>(null);
   const saving = useRef<Promise<void>>(Promise.resolve());
   const settings = useMemo(() => getSettings(), []);
@@ -121,8 +125,15 @@ function EditorView({ uid, initial, onSaved, registerClose, registerApi }: Edito
 
   const persist = async (force: boolean) => {
     const api = apiRef.current;
-    if (!api) return;
+    if (!api || !sceneReady.current) return;
     if (!force && getSceneVersion(api.getSceneElementsIncludingDeleted()) === lastSavedVersion.current) return;
+    // A scene with no elements at all (not even deleted markers) while the
+    // block had elements is a load failure, never a user action: deleting in
+    // Excalidraw leaves isDeleted elements behind.
+    if (initial.elements.length > 0 && api.getSceneElementsIncludingDeleted().length === 0) {
+      console.warn("[better-excalidraw] refusing to overwrite a drawing with an empty scene", uid);
+      return;
+    }
     // Uploads stamp firebaseUrl onto image elements, which bumps their version;
     // read the scene again afterwards so the saved elements carry the URLs.
     const leftover = await uploadPendingFiles(api);
@@ -143,6 +154,15 @@ function EditorView({ uid, initial, onSaved, registerClose, registerApi }: Edito
   };
 
   const scheduleSave = () => {
+    if (!sceneReady.current) {
+      const api = apiRef.current;
+      if (!api) return;
+      const elements = api.getSceneElementsIncludingDeleted();
+      if (elements.length === 0) return;
+      sceneReady.current = true;
+      lastSavedVersion.current = getSceneVersion(elements);
+      return;
+    }
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
       timer.current = null;

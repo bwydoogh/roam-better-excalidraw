@@ -17,6 +17,7 @@ const COMMANDS = {
   toNative: "Better Excalidraw: Convert back to native Excalidraw",
 };
 
+
 let cleanup: (() => void) | null = null;
 
 function toast(message: string): void {
