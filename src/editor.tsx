@@ -208,23 +208,48 @@ function EditorView({ uid, initial, onSaved, registerClose, registerApi }: Edito
  * gives up exactly the sidebar's width and follows it as the user resizes or
  * closes it. Excalidraw re-fits its canvas through its own ResizeObserver.
  */
+const SIDEBAR_SELECTORS = ["#right-sidebar", "#roam-right-sidebar-content", ".rm-sidebar-outline", ".sidebar-content"];
+
+function findSidebar(): HTMLElement | null {
+  for (const selector of SIDEBAR_SELECTORS) {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (el) return el;
+  }
+  return null;
+}
+
 function fitBesideSidebar(container: HTMLElement): () => void {
-  const sidebar = document.getElementById("right-sidebar");
-  if (!sidebar) return () => {};
+  let watched: HTMLElement | null = null;
+  let resize: ResizeObserver | null = null;
   const apply = () => {
-    const width = sidebar.getBoundingClientRect().width;
-    const visible = width > 40 && getComputedStyle(sidebar).display !== "none";
-    container.style.right = visible ? `${Math.round(width)}px` : "";
-    container.classList.toggle("bex-beside-sidebar", visible);
+    const sidebar = findSidebar();
+    if (sidebar !== watched) {
+      resize?.disconnect();
+      watched = sidebar;
+      if (sidebar) {
+        resize = new ResizeObserver(apply);
+        resize.observe(sidebar);
+      }
+    }
+    const rect = sidebar?.getBoundingClientRect();
+    // Roam's sidebar sits at the right edge; take whatever it occupies there.
+    const width = rect && rect.width > 40 && rect.right > window.innerWidth - 4 ? window.innerWidth - rect.left : 0;
+    container.style.right = width > 0 ? `${Math.round(width)}px` : "";
+    container.classList.toggle("bex-beside-sidebar", width > 0);
   };
-  const resize = new ResizeObserver(apply);
-  resize.observe(sidebar);
+  // The sidebar element is created when first opened, so watch the body too.
   const mutation = new MutationObserver(apply);
-  mutation.observe(sidebar, { attributes: true, attributeFilter: ["style", "class"] });
+  mutation.observe(document.body, { childList: true, subtree: false, attributes: true, attributeFilter: ["class", "style"] });
+  const app = document.querySelector(".roam-app") ?? document.body;
+  const appMutation = new MutationObserver(apply);
+  appMutation.observe(app, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+  window.addEventListener("resize", apply);
   apply();
   return () => {
-    resize.disconnect();
+    resize?.disconnect();
     mutation.disconnect();
+    appMutation.disconnect();
+    window.removeEventListener("resize", apply);
   };
 }
 
@@ -252,7 +277,7 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
   bar.className = "bex-modal-bar";
   const title = document.createElement("span");
   title.className = "bex-modal-title";
-  title.textContent = "Better Excalidraw";
+  title.textContent = `Better Excalidraw · ${__BUILD_STAMP__}`;
   const actions = document.createElement("div");
   actions.className = "bex-modal-actions";
   const imageButton = document.createElement("button");
