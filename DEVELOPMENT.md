@@ -24,8 +24,10 @@ fails if they have drifted from `src/`.
 
 Excalidraw is ESM-only and ships lazy chunks that esbuild inlines. The trim
 plugin stubs the Mermaid converter (~3 MB) and every locale except en/nl/fr/de
-(~1.5 MB). What remains (~3 MB) includes a ~1.8 MB harfbuzz wasm used for font
-subsetting in SVG export; shrinking that is milestone 3 work.
+(~1.5 MB), and inlines every font except the 12 MB CJK one as data URLs (Depot
+ships no asset folder and the alternative is loading fonts from esm.sh). What
+remains (~3.4 MB) includes a ~1.8 MB harfbuzz wasm used for font subsetting in
+SVG export.
 
 ## Commands
 
@@ -93,6 +95,13 @@ and must be walked through every release.
 10. **Dark theme.** Toggle Roam's theme; Previews re-render in dark mode.
 11. **Reload.** Depot dev mode reload: no duplicated Previews, no leaked
     commands in the command palette, one Editor at most.
+12. **Images.** Paste an image into the Editor. Within the autosave delay the
+    image element gets `customData.firebaseUrl` (check the props) and
+    `files-json` stays `{}`. Reload Roam: the Preview and the Editor show the
+    image again (fetched through `file.get`, which decrypts on encrypted graphs).
+    Convert to native: Roam's own renderer shows the image too.
+13. **Fonts offline.** Disconnect from the network, reload Roam, open a drawing
+    with hand-drawn text: the Excalifont glyphs render, not a fallback sans.
 
 ## Release checklist
 

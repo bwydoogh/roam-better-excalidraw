@@ -23,6 +23,7 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - `src/schema.ts` — pure props schema (ADR 0001): read a drawing from any key spelling, merge it back over existing props. Tested.
 - `src/roam.ts` — the only module that touches `window.roamAlphaAPI`. `saveDrawing` is read-merge-write.
 - `src/preview.ts` — inline SVG Preview with a per-block cache keyed on a scene fingerprint.
+- `src/files.ts` — images: upload through `roamAlphaAPI.file.upload`, stamp `customData.firebaseUrl` on the image element like native does, fetch back through `file.get`; only files whose upload failed travel inside the block.
 - `src/editor.tsx` — the modal Editor (Excalidraw React component), debounced autosave, single instance.
 - `src/settings.ts`, `src/theme.ts` — settings panel and theme resolution.
 - `src/extension.ts` — onload/onunload, the button observer, command palette.
@@ -38,6 +39,8 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - **The MutationObserver must not re-mount.** `upgradeButton` marks the button with `data-bex-mounted`; Roam re-renders blocks freely (edit mode, sidebar, embeds) and each fresh button gets its own Preview host.
 - **Cleanup must be idempotent.** `onload` first calls the module-local `cleanup`, then `window.__betterExcalidrawCleanup` from a previous module instance. Depot dev mode reloads the module without `onunload`.
 - **One Editor at a time.** `openEditor` on a second uid closes the first (flushing its save) and then opens the new one. Escape closes only when the event target is the modal container itself, so Excalidraw's own Escape (deselect) is untouched.
+- **Images never live in props unless an upload failed.** `uploadPendingFiles` runs before every save and rewrites image elements with `customData.firebaseUrl`; `filesToPersist` keeps only the leftovers. Native Roam reads the same `firebaseUrl`, so converted drawings keep their images.
+- **Fonts are inlined at build time**, not loaded from esm.sh: `tools/build.mjs` replaces Excalidraw's `"./fonts/…woff2"` literals with data URLs (all but the CJK family). `window.EXCALIDRAW_ASSET_PATH` is deliberately unset.
 - **Autosave skips no-op changes.** `getSceneVersion` gates the debounced save; closing forces one final write so appState (zoom, scroll) lands too.
 
 ## Testing

@@ -64,10 +64,31 @@ const trimPlugin = {
     b.onLoad({ filter: /.*/, namespace: "locale-stub" }, () => ({ contents: "export default {};", loader: "js" }));
     // Excalidraw's dist embeds its own (public) Firebase web config for collab
     // rooms. We never use collab, and the key trips GitHub secret scanning.
+    // Fonts: Excalidraw resolves "./fonts/<Family>/<file>.woff2" against
+    // window.EXCALIDRAW_ASSET_PATH or, failing that, esm.sh. Depot ships no
+    // asset folder, so every font except the 12 MB CJK one is inlined as a
+    // data: URL, which `new URL(uri, base)` accepts as-is.
     b.onLoad({ filter: /@excalidraw\/excalidraw\/dist\/prod\/chunk-[A-Z0-9]+\.js$/ }, async (args) => {
-      const source = await readFile(args.path, "utf8");
-      if (!source.includes("VITE_APP_FIREBASE_CONFIG")) return null;
-      return { contents: source.replace(/VITE_APP_FIREBASE_CONFIG:'[^']*'/, "VITE_APP_FIREBASE_CONFIG:'{}'"), loader: "js" };
+      let source = await readFile(args.path, "utf8");
+      let changed = false;
+      if (source.includes("VITE_APP_FIREBASE_CONFIG")) {
+        source = source.replace(/VITE_APP_FIREBASE_CONFIG:'[^']*'/, "VITE_APP_FIREBASE_CONFIG:'{}'");
+        changed = true;
+      }
+      const fontDir = resolve(args.path, "..");
+      const inlined = await Promise.all(
+        [...source.matchAll(/"\.\/fonts\/([A-Za-z]+)\/([^"]+\.woff2)"/g)].map(async (m) => {
+          if (m[1] === "Xiaolai") return null;
+          const data = await readFile(resolve(fontDir, "fonts", m[1], m[2]));
+          return [m[0], `"data:font/woff2;base64,${data.toString("base64")}"`];
+        }),
+      );
+      for (const pair of inlined) {
+        if (!pair) continue;
+        source = source.split(pair[0]).join(pair[1]);
+        changed = true;
+      }
+      return changed ? { contents: source, loader: "js" } : null;
     });
   },
 };

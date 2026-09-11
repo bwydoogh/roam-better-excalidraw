@@ -2,6 +2,7 @@
 // cached per block so a page full of drawings renders each one once.
 import { exportToSvg } from "@excalidraw/excalidraw";
 import type { DrawingData } from "./schema.ts";
+import { resolveFiles, type ImageLikeElement } from "./files.ts";
 import { parseOptions } from "./blockString.ts";
 import { blockString, loadDrawing, unwatchAllBlocks, unwatchBlock, watchBlock } from "./roam.ts";
 import { getSettings } from "./settings.ts";
@@ -27,6 +28,8 @@ async function renderSvg(uid: string, drawing: DrawingData, theme: "light" | "da
   if (hit && hit.key === key) return hit.svg.cloneNode(true) as SVGSVGElement;
   const live = (drawing.elements as Array<{ isDeleted?: boolean }>).filter((el) => !el.isDeleted);
   if (live.length === 0) return null;
+  const stored = drawing.files as never;
+  const files = { ...(drawing.files as object), ...(await resolveFiles(live as ImageLikeElement[], stored)) };
   const svg = await exportToSvg({
     elements: live as never,
     appState: {
@@ -35,7 +38,7 @@ async function renderSvg(uid: string, drawing: DrawingData, theme: "light" | "da
       exportBackground: false,
       theme,
     } as never,
-    files: drawing.files as never,
+    files: files as never,
     exportPadding: 16,
   });
   cache.set(uid, { key, svg });

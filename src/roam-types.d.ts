@@ -32,6 +32,11 @@ declare global {
       pull(pattern: string, eid: unknown): RoamPullBlock | null;
       q(query: string, ...inputs: unknown[]): unknown[][];
       util: { generateUID(): string };
+      file: {
+        upload(args: { file: File; toast?: { hide?: boolean } }): Promise<string>;
+        get(args: { url: string; format?: "base64" }): Promise<File | { base64: string; filename?: string; mimetype?: string }>;
+        delete(args: { url: string }): Promise<void>;
+      };
       data: {
         block: {
           update(args: { block: { uid: string; string?: string; props?: Record<string, unknown> } }): Promise<void>;

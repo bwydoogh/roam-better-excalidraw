@@ -4,6 +4,7 @@ import { Excalidraw, getSceneVersion, restoreAppState, restoreElements } from "@
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { createRoot, type Root } from "react-dom/client";
 import { useEffect, useMemo, useRef } from "react";
+import { filesToPersist, resolveFiles, uploadPendingFiles, type ImageLikeElement } from "./files.ts";
 import { loadDrawing, saveDrawing } from "./roam.ts";
 import type { DrawingData } from "./schema.ts";
 import { getSettings } from "./settings.ts";
@@ -70,15 +71,17 @@ function EditorView({ uid, initial, onSaved, registerClose }: EditorProps) {
   const persist = async (force: boolean) => {
     const api = apiRef.current;
     if (!api) return;
+    if (!force && getSceneVersion(api.getSceneElementsIncludingDeleted()) === lastSavedVersion.current) return;
+    // Uploads stamp firebaseUrl onto image elements, which bumps their version;
+    // read the scene again afterwards so the saved elements carry the URLs.
+    const leftover = await uploadPendingFiles(api);
     const elements = api.getSceneElementsIncludingDeleted();
-    const version = getSceneVersion(elements);
-    if (!force && version === lastSavedVersion.current) return;
-    lastSavedVersion.current = version;
+    lastSavedVersion.current = getSceneVersion(elements);
     const drawing: DrawingData = {
       instanceId: initial.instanceId,
       elements: elements as unknown[],
       appState: serialisableState(api.getAppState() as unknown as Record<string, unknown>),
-      files: api.getFiles() as unknown as Record<string, unknown>,
+      files: filesToPersist(elements as unknown as ImageLikeElement[], { ...api.getFiles(), ...leftover }) as unknown as Record<string, unknown>,
       version: initial.version,
     };
     saving.current = saving.current.then(() => saveDrawing(uid, drawing)).then(
@@ -111,6 +114,10 @@ function EditorView({ uid, initial, onSaved, registerClose }: EditorProps) {
     <Excalidraw
       excalidrawAPI={(api) => {
         apiRef.current = api;
+        void resolveFiles(initial.elements as ImageLikeElement[], api.getFiles()).then((files) => {
+          const list = Object.values(files);
+          if (list.length > 0 && apiRef.current === api) api.addFiles(list);
+        });
       }}
       initialData={initialData as never}
       onChange={scheduleSave}
