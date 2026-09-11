@@ -10,9 +10,16 @@
     "watch": "node tools/build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "node --test tools/test-logic.mjs",
-    "check": "tsc --noEmit && node --test tools/test-logic.mjs && node tools/build.mjs --check"
+    "check": "tsc --noEmit && node --test tools/test-logic.mjs && node tools/build.mjs --check",
+    "purge-cdn": "node tools/purge-cdn.mjs",
+    "deploy-dev": "git push && node tools/purge-cdn.mjs"
   },
-  "keywords": ["roam-research", "roam-depot", "excalidraw", "drawing"],
+  "keywords": [
+    "roam-research",
+    "roam-depot",
+    "excalidraw",
+    "drawing"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@excalidraw/excalidraw": "0.18.1",

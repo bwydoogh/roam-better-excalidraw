@@ -10,7 +10,8 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - `npm run check` — the gate: `tsc --noEmit`, `tools/test-logic.mjs`, and a build-drift check. Runs no browser.
 - `npm run test` — logic checks only (Node's built-in test runner, imports `.ts` directly).
 - `npm run watch` — rebuild on change (unminified).
-- `npm run dev` — serve the repo on `http://localhost:8790` with CORS for `Load extension from URL`.
+- `npm run deploy-dev` — `git push` plus a jsDelivr cache purge; Roam loads `https://cdn.jsdelivr.net/gh/bwydoogh/roam-better-excalidraw@main/extension.js` in dev mode, so every pushed change needs this followed by `View → Reload` in Roam.
+- `npm run dev` — serve the repo on `http://localhost:8790` with CORS, the offline alternative.
 - `git diff --check` — required pre-commit whitespace check.
 
 ## Architecture

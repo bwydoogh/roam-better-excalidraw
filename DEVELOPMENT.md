@@ -12,6 +12,7 @@ release notes. Vocabulary: `CONTEXT.md`. Decisions: `docs/adr/`.
 - `build.sh`: what Roam Depot runs before collecting the two shipped files (`npm ci` + build).
 - `extension.js`, `extension.css`: **generated and committed** — the shipped artifacts.
 - `dev-server.mjs`: dependency-free local server with CORS headers.
+- `tools/purge-cdn.mjs`: purges jsDelivr's cache for the `@main` URL Roam loads.
 
 ### Why the generated files are committed
 
@@ -42,25 +43,40 @@ git diff --check     # required pre-commit whitespace check
 
 ## Local test in Roam
 
-Run `npm run build`, then `npm run dev`.
+### Preferred: load from GitHub through jsDelivr
 
-### Roam Depot development mode
+In Roam Depot development mode choose `Load extension from URL`:
+
+```text
+https://cdn.jsdelivr.net/gh/bwydoogh/roam-better-excalidraw@main/extension.js
+```
+
+Roam fetches `extension.js` and `extension.css` from there on every app
+reload, no folder dialog. The loop per change:
+
+```sh
+npm run build && npm run check
+git commit -am "..."
+npm run deploy-dev        # git push + purge jsDelivr's cache for @main
+```
+
+Then `View → Reload` in Roam (⌘R). Roam caches an already-imported module for
+the session, so a reload is always needed; if a change still does not show,
+use `View → Force Reload` to bypass Electron's HTTP cache.
+
+`npm run purge-cdn` purges without pushing. A pinned commit can be tested with
+`@COMMIT_SHA` instead of `@main`; that URL never needs purging.
+
+### Alternative: folder picker
 
 1. Enable development mode in Roam Depot settings.
-2. Use the folder picker to load this repository folder.
+2. Use the folder picker to load this repository folder (Roam asks again after
+   every app reload).
 3. Open the extension settings tab named `Better Excalidraw`.
 
-### Load extension from URL
+### Alternative: local dev server
 
-```text
-http://localhost:8790/extension.js
-```
-
-After pushing to GitHub, test a fixed commit through jsDelivr:
-
-```text
-https://cdn.jsdelivr.net/gh/bwydoogh/roam-better-excalidraw@COMMIT_SHA/extension.js
-```
+`npm run dev`, then `Load extension from URL` with `http://localhost:8790/extension.js`.
 
 ## Manual test checklist
 
