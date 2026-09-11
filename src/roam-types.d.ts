@@ -5,7 +5,7 @@ export interface RoamPullBlock {
   ":block/uid"?: string;
   ":block/string"?: string;
   ":block/props"?: Record<string, unknown>;
-  ":block/children"?: Array<{ ":block/uid": string; ":block/order"?: number }>;
+  ":block/children"?: Array<{ ":block/uid": string; ":block/string"?: string; ":block/order"?: number }>;
 }
 
 export interface RoamFocusedBlock {
@@ -38,6 +38,9 @@ declare global {
         delete(args: { url: string }): Promise<void>;
       };
       data: {
+        page: {
+          create(args: { page: { title: string; uid?: string } }): Promise<void>;
+        };
         block: {
           update(args: { block: { uid: string; string?: string; props?: Record<string, unknown> } }): Promise<void>;
           create(args: { location: { "parent-uid": string; order: number | "last" }; block: { uid?: string; string: string; props?: Record<string, unknown> } }): Promise<void>;
@@ -47,6 +50,8 @@ declare global {
       };
       ui: {
         getFocusedBlock(): RoamFocusedBlock | null;
+        mainWindow: { openBlock(args: { block: { uid: string } }): Promise<void>; openPage(args: { page: { uid?: string; title?: string } }): Promise<void> };
+        rightSidebar: { addWindow(args: { window: { type: "outline" | "block" | "mentions"; "block-uid": string } }): Promise<void> };
         commandPalette: {
           addCommand(cmd: { label: string; callback: () => void; "disable-hotkey"?: boolean }): void;
           removeCommand(cmd: { label: string }): void;

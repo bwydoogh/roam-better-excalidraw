@@ -1,11 +1,13 @@
 // The Editor: a full-size modal hosting Excalidraw, autosaving to the block.
 // At most one Editor is open at a time; opening a second focuses the first.
-import { Excalidraw, getSceneVersion, restoreAppState, restoreElements } from "@excalidraw/excalidraw";
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import { Excalidraw, exportToBlob, getSceneVersion, restoreAppState, restoreElements } from "@excalidraw/excalidraw";
+import type { ExcalidrawImperativeAPI, PointerDownState } from "@excalidraw/excalidraw/types";
 import { createRoot, type Root } from "react-dom/client";
 import { useEffect, useMemo, useRef } from "react";
 import { filesToPersist, resolveFiles, uploadPendingFiles, type ImageLikeElement } from "./files.ts";
-import { loadDrawing, saveDrawing } from "./roam.ts";
+import { loadLibrary, saveLibrary } from "./library.ts";
+import { findRoamLinks, textUnderPointer } from "./links.ts";
+import { insertImageChild, loadDrawing, openInMainWindow, openInSidebar, pageUidByTitle, saveDrawing } from "./roam.ts";
 import type { DrawingData } from "./schema.ts";
 import { getSettings } from "./settings.ts";
 import { resolveTheme } from "./theme.ts";
@@ -14,7 +16,34 @@ interface ActiveEditor {
   uid: string;
   container: HTMLElement;
   root: Root;
+  api: () => ExcalidrawImperativeAPI | null;
   close: () => Promise<void>;
+}
+
+async function insertAsImage(uid: string, button: HTMLButtonElement): Promise<void> {
+  const api = active?.api();
+  if (!api || active?.uid !== uid) return;
+  button.disabled = true;
+  try {
+    const blob = await exportToBlob({
+      elements: api.getSceneElements(),
+      appState: { ...api.getAppState(), exportBackground: true, exportWithDarkMode: false },
+      files: api.getFiles(),
+      mimeType: "image/png",
+      exportPadding: 16,
+      getDimensions: (w: number, h: number) => ({ width: w * 2, height: h * 2, scale: 2 }),
+    });
+    await insertImageChild(uid, blob);
+    button.textContent = "Image inserted";
+  } catch (error) {
+    console.error("[better-excalidraw] insert as image failed", error);
+    button.textContent = "Insert failed";
+  } finally {
+    window.setTimeout(() => {
+      button.textContent = "Insert as image";
+      button.disabled = false;
+    }, 2000);
+  }
 }
 
 let active: ActiveEditor | null = null;
@@ -28,6 +57,7 @@ interface EditorProps {
   initial: DrawingData;
   onSaved(uid: string): void;
   registerClose(fn: () => Promise<void>): void;
+  registerApi(api: ExcalidrawImperativeAPI): void;
 }
 
 /** Keys of appState that must not be persisted: transient UI or unserialisable. */
@@ -44,7 +74,28 @@ function serialisableState(appState: Record<string, unknown>): Record<string, un
   return out;
 }
 
-function EditorView({ uid, initial, onSaved, registerClose }: EditorProps) {
+function resolveLink(link: { kind: "page" | "block"; target: string }): string | null {
+  return link.kind === "block" ? link.target : pageUidByTitle(link.target);
+}
+
+/**
+ * Shift+click on a text (or a labelled shape) containing a Roam link opens it
+ * in the right sidebar; Cmd/Ctrl+click closes the Editor and navigates there.
+ */
+function followLink(api: ExcalidrawImperativeAPI, state: PointerDownState, event: PointerEvent): void {
+  if (!event.shiftKey && !state.withCmdOrCtrl) return;
+  if (state.drag.hasOccurred) return;
+  const text = textUnderPointer(state, api.getSceneElements() as never);
+  if (!text) return;
+  const link = findRoamLinks(text)[0];
+  if (!link) return;
+  const target = resolveLink(link);
+  if (!target) return;
+  if (event.shiftKey) openInSidebar(target);
+  else void closeEditor().then(() => openInMainWindow(target));
+}
+
+function EditorView({ uid, initial, onSaved, registerClose, registerApi }: EditorProps) {
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const lastSavedVersion = useRef<number>(getSceneVersion(initial.elements as never));
   const timer = useRef<number | null>(null);
@@ -114,13 +165,16 @@ function EditorView({ uid, initial, onSaved, registerClose }: EditorProps) {
     <Excalidraw
       excalidrawAPI={(api) => {
         apiRef.current = api;
+        registerApi(api);
+        api.onPointerUp((_tool, state, event) => followLink(api, state, event));
         void resolveFiles(initial.elements as ImageLikeElement[], api.getFiles()).then((files) => {
           const list = Object.values(files);
           if (list.length > 0 && apiRef.current === api) api.addFiles(list);
         });
       }}
-      initialData={initialData as never}
+      initialData={{ ...initialData, libraryItems: loadLibrary() } as never}
       onChange={scheduleSave}
+      onLibraryChange={(items) => saveLibrary(items)}
       theme={theme}
       langCode={settings.langCode}
       gridModeEnabled={undefined}
@@ -154,11 +208,19 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
   const title = document.createElement("span");
   title.className = "bex-modal-title";
   title.textContent = "Better Excalidraw";
+  const actions = document.createElement("div");
+  actions.className = "bex-modal-actions";
+  const imageButton = document.createElement("button");
+  imageButton.className = "bp3-button bp3-minimal";
+  imageButton.textContent = "Insert as image";
+  imageButton.title = "Upload a PNG of this drawing and add it as a child block";
+  imageButton.onclick = () => void insertAsImage(uid, imageButton);
   const closeButton = document.createElement("button");
   closeButton.className = "bp3-button bp3-minimal bex-modal-close";
   closeButton.textContent = "Save & close";
   closeButton.onclick = () => void closeEditor();
-  bar.append(title, closeButton);
+  actions.append(imageButton, closeButton);
+  bar.append(title, actions);
 
   const canvas = document.createElement("div");
   canvas.className = "bex-modal-canvas";
@@ -166,6 +228,7 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
   document.body.append(container);
 
   let flush: () => Promise<void> = async () => {};
+  let editorApi: ExcalidrawImperativeAPI | null = null;
   const root = createRoot(canvas);
   root.render(
     <EditorView
@@ -174,6 +237,9 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
       onSaved={handlers.onSaved}
       registerClose={(fn) => {
         flush = fn;
+      }}
+      registerApi={(api) => {
+        editorApi = api;
       }}
     />,
   );
@@ -189,6 +255,7 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
     uid,
     container,
     root,
+    api: () => editorApi,
     close: async () => {
       container.removeEventListener("keydown", onKeyDown);
       await flush();

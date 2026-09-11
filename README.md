@@ -13,6 +13,18 @@ with autosave, and lossless conversion to and from Roam's native
 - `{{better-excalidraw: height=300}}` fixes the preview height for one block;
   `width=400` caps its width. Both can be combined.
 
+## In the editor
+
+- **Insert as image** (top bar) uploads a PNG of the drawing to Roam and adds it
+  as a child block, handy for sharing or embedding elsewhere.
+- Copy as PNG/SVG and download live in Excalidraw's own export dialog.
+- Your **library** of reusable shapes is stored on the page
+  `roam/better-excalidraw`, so it follows you across devices.
+- Text containing `[[Page]]`, `#tag` or `((ref))` is a real Roam reference: the
+  drawing shows up in that page's linked references. Shift+click such a text in
+  the editor to open it in the sidebar; Cmd/Ctrl+click to close the editor and
+  navigate there.
+
 ## Converting native drawings
 
 Focus a `{{[[excalidraw]]}}` block and run **Convert native drawing to Better

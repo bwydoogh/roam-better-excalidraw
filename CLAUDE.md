@@ -25,6 +25,8 @@ Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native draw
 - `src/preview.ts` — inline SVG Preview with a per-block cache keyed on a scene fingerprint.
 - `src/files.ts` — images: upload through `roamAlphaAPI.file.upload`, stamp `customData.firebaseUrl` on the image element like native does, fetch back through `file.get`; only files whose upload failed travel inside the block.
 - `src/editor.tsx` — the modal Editor (Excalidraw React component), debounced autosave, single instance.
+- `src/library.ts` — the Library persisted in props of a block on page `roam/better-excalidraw`.
+- `src/links.ts` — pure: find Roam links in text, resolve the text under the pointer (labelled shapes included). Tested.
 - `src/settings.ts`, `src/theme.ts` — settings panel and theme resolution.
 - `src/extension.ts` — onload/onunload, the button observer, command palette.
 - `tools/build.mjs` — esbuild with two plugins: React is rewritten to `window.React` shims (Depot forbids bundling React), and Excalidraw's Mermaid converter plus unused locales are stubbed.

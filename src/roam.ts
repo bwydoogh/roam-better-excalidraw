@@ -116,3 +116,50 @@ export function unwatchBlock(uid: string): void {
 export function unwatchAllBlocks(): void {
   for (const uid of [...watches.keys()]) unwatchBlock(uid);
 }
+
+export function pageUidByTitle(title: string): string | null {
+  try {
+    const result = window.roamAlphaAPI.q(
+      "[:find ?u . :in $ ?t :where [?p :node/title ?t] [?p :block/uid ?u]]",
+      title,
+    ) as unknown;
+    return typeof result === "string" ? result : null;
+  } catch {
+    return null;
+  }
+}
+
+export function openInSidebar(uid: string): void {
+  void window.roamAlphaAPI.ui.rightSidebar.addWindow({ window: { type: "outline", "block-uid": uid } });
+}
+
+export function openInMainWindow(uid: string): void {
+  void window.roamAlphaAPI.ui.mainWindow.openBlock({ block: { uid } });
+}
+
+/** Resolves (creating when `create`) the block that stores the Library. */
+export function ensureLibraryBlock(create: boolean): string | null {
+  const title = "roam/better-excalidraw";
+  const marker = "Library (managed by Better Excalidraw, do not edit)";
+  let pageUid = pageUidByTitle(title);
+  if (!pageUid) {
+    if (!create) return null;
+    pageUid = window.roamAlphaAPI.util.generateUID();
+    void window.roamAlphaAPI.data.page.create({ page: { title, uid: pageUid } });
+  }
+  const page = window.roamAlphaAPI.pull("[{:block/children [:block/uid :block/string]}]", [":block/uid", pageUid]);
+  const existing = page?.[":block/children"]?.find((c) => c[":block/string"] === marker);
+  if (existing) return existing[":block/uid"];
+  if (!create) return null;
+  const uid = window.roamAlphaAPI.util.generateUID();
+  void window.roamAlphaAPI.data.block.create({ location: { "parent-uid": pageUid, order: "last" }, block: { uid, string: marker } });
+  return uid;
+}
+
+/** Uploads a PNG of the drawing and adds it as a child block `![](url)`. */
+export async function insertImageChild(parentUid: string, blob: Blob): Promise<string | null> {
+  const file = new File([blob], `drawing-${parentUid}.png`, { type: "image/png" });
+  const result = await window.roamAlphaAPI.file.upload({ file, toast: { hide: true } });
+  const string = typeof result === "string" && result.startsWith("![") ? result : `![](${result})`;
+  return createChildBlock(parentUid, string);
+}

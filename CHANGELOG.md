@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Milestone 4: "Insert as image" in the editor, library persisted on the page
+  `roam/better-excalidraw`, Shift/Cmd+click on Roam links inside drawings.
 - Milestone 3: images are stored in Roam's file storage exactly like native
   drawings (`customData.firebaseUrl`), and Excalidraw's fonts ship inside the
   bundle instead of loading from a CDN.

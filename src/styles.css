@@ -58,5 +58,6 @@
 }
 .bex-modal.bex-dark .bex-modal-bar { border-bottom-color: rgba(255, 255, 255, 0.15); }
 .bex-modal-title { font-weight: 600; }
+.bex-modal-actions { display: flex; gap: 6px; }
 .bex-modal-canvas { flex: 1 1 auto; min-height: 0; position: relative; }
 .bex-modal-canvas .excalidraw { height: 100%; }

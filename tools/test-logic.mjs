@@ -10,6 +10,7 @@ import {
   withMirror,
 } from "../src/blockString.ts";
 import { hasDrawingProps, mergeDrawingProps, readDrawing } from "../src/schema.ts";
+import { findRoamLinks, textUnderPointer } from "../src/links.ts";
 
 const NATIVE = '{{[[excalidraw]]}} {{-: Text elements in drawing: Gitlab ; Push tag ; start "automated\ndeployment" }}';
 
@@ -94,4 +95,25 @@ test("mergeDrawingProps keeps foreign props and dedupes ours", () => {
     "image-size",
   ]);
   assert.equal(merged["excalidraw/elements-json"], "[1]");
+});
+
+test("findRoamLinks recognises pages, tags and block refs", () => {
+  assert.deepEqual(findRoamLinks("see [[Project X]] and #todo and #[[multi word]] then ((abcdefghi))"), [
+    { kind: "page", target: "Project X" },
+    { kind: "page", target: "todo" },
+    { kind: "page", target: "multi word" },
+    { kind: "block", target: "abcdefghi" },
+  ]);
+  assert.deepEqual(findRoamLinks("plain text"), []);
+  assert.deepEqual(findRoamLinks("C# is not a tag"), []);
+});
+
+test("textUnderPointer follows a container to its label", () => {
+  const label = { id: "t", type: "text", text: "[[A]]", originalText: "[[A]]" };
+  const box = { id: "r", type: "rectangle", boundElements: [{ id: "t", type: "text" }] };
+  const state = (element) => ({ hit: { element } });
+  assert.equal(textUnderPointer(state(label), [label, box]), "[[A]]");
+  assert.equal(textUnderPointer(state(box), [label, box]), "[[A]]");
+  assert.equal(textUnderPointer(state({ id: "x", type: "ellipse" }), [label, box]), null);
+  assert.equal(textUnderPointer(state(null), []), null);
 });

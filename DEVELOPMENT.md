@@ -100,6 +100,15 @@ and must be walked through every release.
     `files-json` stays `{}`. Reload Roam: the Preview and the Editor show the
     image again (fetched through `file.get`, which decrypts on encrypted graphs).
     Convert to native: Roam's own renderer shows the image too.
+14. **Insert as image.** In the Editor click "Insert as image": a child block
+    `![](url)` appears under the drawing block showing a PNG of the drawing.
+15. **Library.** Add a shape to the library, close, reload Roam, reopen any
+    drawing: the shape is still in the library. The page `roam/better-excalidraw`
+    holds one block with the library in its props.
+16. **Links.** Put `[[Some Page]]` in a text element. The drawing block appears
+    in that page's linked references. Shift+click the text: the page opens in
+    the right sidebar. Cmd/Ctrl+click: the Editor closes and Roam navigates
+    to the page.
 13. **Fonts offline.** Disconnect from the network, reload Roam, open a drawing
     with hand-drawn text: the Excalifont glyphs render, not a fallback sans.
 
