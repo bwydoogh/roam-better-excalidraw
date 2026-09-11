@@ -21,6 +21,14 @@ developer-mode folder picker and jsDelivr commit URLs read them straight from
 the repo without running `build.sh`, so they must be committed. `npm run check`
 fails if they have drifted from `src/`.
 
+### Excalidraw version
+
+`package.json` pins an exact nightly (`0.18.0-<sha>` from the npm `next` tag).
+To bump: `npm view @excalidraw/excalidraw dist-tags.next`, install it with
+`--save-exact`, run `npm run check`, rebuild, and walk the manual checklist.
+Then add any new element type Roam's native renderer can show to
+`NATIVE_ELEMENT_TYPES` in `src/blockString.ts` once Roam itself upgrades.
+
 ### Bundle size
 
 Excalidraw is ESM-only and ships lazy chunks that esbuild inlines. The trim
@@ -125,6 +133,9 @@ and must be walked through every release.
     in that page's linked references. Shift+click the text: the page opens in
     the right sidebar. Cmd/Ctrl+click: the Editor closes and Roam navigates
     to the page.
+17. **Convert-back warning.** Add a sticky note (nightly feature) to a
+    drawing, run "Convert back to native Excalidraw": a confirm dialog names
+    `stickynote`. Cancel keeps the block untouched.
 13. **Fonts offline.** Disconnect from the network, reload Roam, open a drawing
     with hand-drawn text: the Excalifont glyphs render, not a fallback sans.
 

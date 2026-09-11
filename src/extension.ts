@@ -3,10 +3,10 @@
 // reachable through window.__betterExcalidrawCleanup from a previous instance.
 import "./styles.css";
 import type { ExtensionAPI } from "./roam-types.d.ts";
-import { COMPONENT, isDrawingBlock, isNativeDrawingBlock, toBetterExcalidraw, toNativeExcalidraw } from "./blockString.ts";
+import { COMPONENT, isDrawingBlock, isNativeDrawingBlock, toBetterExcalidraw, toNativeExcalidraw, unsupportedNativeTypes } from "./blockString.ts";
 import { closeEditor, openEditor } from "./editor.tsx";
 import { mountPreview, previewClass, refreshAllPreviews, refreshPreviewsFor, sweepPreviews, unmountAllPreviews } from "./preview.ts";
-import { blockString, blockUidFromElement, createChildBlock, focusedBlockUid, updateBlockString } from "./roam.ts";
+import { blockString, blockUidFromElement, createChildBlock, focusedBlockUid, loadDrawing, updateBlockString } from "./roam.ts";
 import { initSettings } from "./settings.ts";
 
 const BUTTON_SELECTOR = `button.bp3-button.rm-xparser-default-${COMPONENT}`;
@@ -67,6 +67,16 @@ async function convertFocused(direction: "toBetter" | "toNative"): Promise<void>
   const current = blockString(uid);
   if (direction === "toBetter" && !isNativeDrawingBlock(current)) return toast("focused block is not a native Excalidraw drawing");
   if (direction === "toNative" && !isDrawingBlock(current)) return toast("focused block is not a Better Excalidraw drawing");
+  if (direction === "toNative") {
+    const unsupported = unsupportedNativeTypes(loadDrawing(uid).elements as Array<{ type: string; isDeleted?: boolean }>);
+    if (unsupported.length > 0) {
+      const ok = window.confirm(
+        `This drawing uses element types Roam's built-in Excalidraw cannot render: ${unsupported.join(", ")}.\n` +
+          "The data is kept, but those elements will be invisible (or break the drawing) in native mode until you convert back.\n\nConvert anyway?",
+      );
+      if (!ok) return;
+    }
+  }
   await updateBlockString(uid, direction === "toBetter" ? toBetterExcalidraw : toNativeExcalidraw);
 }
 

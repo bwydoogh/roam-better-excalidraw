@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Excalidraw bumped to nightly 0.18.0-afa3a65 (2026-09-10): sticky notes and
+  five months of upstream fixes. Convert-back-to-native warns when a drawing
+  uses element types Roam's built-in renderer does not know.
 - Milestone 4: "Insert as image" in the editor, library persisted on the page
   `roam/better-excalidraw`, Shift/Cmd+click on Roam links inside drawings.
 - Milestone 3: images are stored in Roam's file storage exactly like native

@@ -183,7 +183,8 @@ function EditorView({ uid, initial, onSaved, registerClose, registerApi }: Edito
 
   return (
     <Excalidraw
-      excalidrawAPI={(api) => {
+      onExcalidrawAPI={(api) => {
+        if (!api) return;
         apiRef.current = api;
         registerApi(api);
         api.onPointerUp((_tool, state, event) => followLink(api, state, event));

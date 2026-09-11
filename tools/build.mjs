@@ -71,6 +71,12 @@ const trimPlugin = {
       contents: `export async function parseMermaidToExcalidraw() { throw new Error("Mermaid import is not bundled in Better Excalidraw"); }`,
       loader: "js",
     }));
+    // Font subsetting normally runs in a Worker whose URL is import.meta.url of
+    // the worker chunk. Inlined into one bundle that URL would be extension.js
+    // itself, so the whole extension would boot inside a worker and fail.
+    // Without a URL Excalidraw falls back to subsetting on the main thread.
+    b.onResolve({ filter: /^\.\/subset-worker\.chunk\.js$/ }, (args) => ({ path: args.path, namespace: "worker-stub" }));
+    b.onLoad({ filter: /.*/, namespace: "worker-stub" }, () => ({ contents: "export const WorkerUrl = undefined;", loader: "js" }));
     // Built locale files carry a content hash: ./locales/nl-NL-ABCDEFGH.js
     b.onResolve({ filter: /^\.\/locales\/[A-Za-z0-9-]+\.js$/ }, (args) => {
       const code = args.path.match(/locales\/([A-Za-z-]+?)(?:-[A-Z0-9]{8})?\.js$/)[1];

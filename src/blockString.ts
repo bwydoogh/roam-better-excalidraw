@@ -81,3 +81,18 @@ export function toBetterExcalidraw(text: string): string {
 export function toNativeExcalidraw(text: string): string {
   return text.replace(COMPONENT_RE, "{{[[excalidraw]]}}");
 }
+
+/** Element types Roam's native Excalidraw (0.18.0) can render. */
+const NATIVE_ELEMENT_TYPES = new Set([
+  "selection", "rectangle", "diamond", "ellipse", "arrow", "line", "freedraw", "text", "image",
+  "frame", "magicframe", "iframe", "embeddable",
+]);
+
+/** Types in a scene that Roam's native renderer does not know, deduplicated. Pure; tested. */
+export function unsupportedNativeTypes(elements: Array<{ type: string; isDeleted?: boolean }>): string[] {
+  const out = new Set<string>();
+  for (const el of elements) {
+    if (!el.isDeleted && !NATIVE_ELEMENT_TYPES.has(el.type)) out.add(el.type);
+  }
+  return [...out].sort();
+}

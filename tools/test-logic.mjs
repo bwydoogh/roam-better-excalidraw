@@ -7,6 +7,7 @@ import {
   parseOptions,
   toBetterExcalidraw,
   toNativeExcalidraw,
+  unsupportedNativeTypes,
   withMirror,
 } from "../src/blockString.ts";
 import { hasDrawingProps, mergeDrawingProps, readDrawing } from "../src/schema.ts";
@@ -116,4 +117,9 @@ test("textUnderPointer follows a container to its label", () => {
   assert.equal(textUnderPointer(state(box), [label, box]), "[[A]]");
   assert.equal(textUnderPointer(state({ id: "x", type: "ellipse" }), [label, box]), null);
   assert.equal(textUnderPointer(state(null), []), null);
+});
+
+test("unsupportedNativeTypes flags only live, non-native element types", () => {
+  assert.deepEqual(unsupportedNativeTypes([{ type: "rectangle" }, { type: "text" }, { type: "image" }]), []);
+  assert.deepEqual(unsupportedNativeTypes([{ type: "stickynote" }, { type: "video" }, { type: "stickynote" }, { type: "document", isDeleted: true }]), ["stickynote", "video"]);
 });
