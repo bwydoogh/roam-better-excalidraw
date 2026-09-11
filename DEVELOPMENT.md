@@ -119,3 +119,23 @@ and must be walked through every release.
 3. Bump `version` in `package.json`, update `CHANGELOG.md`, commit, push.
 4. Update `source_commit` in `extensions/bwydoogh/roam-better-excalidraw.json` in
    `Roam-Research/roam-depot` and open the PR.
+
+Roam Depot metadata:
+
+```json
+{
+  "name": "Better Excalidraw",
+  "short_description": "Excalidraw drawings with a sharp inline preview, a full-size editor with autosave, and lossless conversion to and from Roam's native drawings.",
+  "author": "Benny Wydooghe",
+  "tags": ["excalidraw", "drawing", "diagram", "whiteboard"],
+  "source_url": "https://github.com/bwydoogh/roam-better-excalidraw",
+  "source_repo": "https://github.com/bwydoogh/roam-better-excalidraw.git",
+  "source_commit": "FINAL_COMMIT_SHA",
+  "stripe_account": "acct_1TzsHJQdGIF0T8Wk"
+}
+```
+
+`stripe_account` is the same connected-account id as in the other extensions
+(a public identifier, not a secret). `source_commit` is filled in at release
+time. Depot runs `build.sh` (`npm ci` + esbuild) before collecting
+`extension.js` and `extension.css`, and both are committed as well.
