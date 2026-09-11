@@ -1,0 +1,57 @@
+@import "@excalidraw/excalidraw/index.css";
+
+/* Preview ------------------------------------------------------------- */
+.bex-preview {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+  margin: 4px 0;
+}
+.bex-preview:hover { border-color: rgba(0, 0, 0, 0.3); }
+.bex-preview:focus-visible { outline: 2px solid #137cbd; outline-offset: 1px; }
+.bex-preview.bex-dark { background: #121212; border-color: rgba(255, 255, 255, 0.15); }
+.bex-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: inherit;
+}
+.bex-preview-empty {
+  padding: 14px;
+  color: #8a9ba8;
+  font-size: 13px;
+  text-align: center;
+}
+.rm-xparser-default-better-excalidraw { display: none !important; }
+
+/* Editor modal ---------------------------------------------------------- */
+.bex-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  outline: none;
+}
+.bex-modal.bex-dark { background: #121212; color: #ddd; }
+.bex-modal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+.bex-modal.bex-dark .bex-modal-bar { border-bottom-color: rgba(255, 255, 255, 0.15); }
+.bex-modal-title { font-weight: 600; }
+.bex-modal-canvas { flex: 1 1 auto; min-height: 0; position: relative; }
+.bex-modal-canvas .excalidraw { height: 100%; }

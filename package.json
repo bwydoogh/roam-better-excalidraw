@@ -1,0 +1,24 @@
+{
+  "name": "roam-better-excalidraw",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Roam Research extension: a better Excalidraw block with a sharp inline preview, a full-size editor, and lossless conversion to and from Roam's native drawings.",
+  "type": "module",
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "build": "node tools/build.mjs",
+    "watch": "node tools/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tools/test-logic.mjs",
+    "check": "tsc --noEmit && node --test tools/test-logic.mjs && node tools/build.mjs --check"
+  },
+  "keywords": ["roam-research", "roam-depot", "excalidraw", "drawing"],
+  "license": "MIT",
+  "devDependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "esbuild": "0.25.9",
+    "typescript": "5.9.2"
+  }
+}
