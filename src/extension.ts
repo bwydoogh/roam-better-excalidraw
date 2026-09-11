@@ -5,7 +5,7 @@ import "./styles.css";
 import type { ExtensionAPI } from "./roam-types.d.ts";
 import { COMPONENT, isDrawingBlock, isNativeDrawingBlock, toBetterExcalidraw, toNativeExcalidraw } from "./blockString.ts";
 import { closeEditor, openEditor } from "./editor.tsx";
-import { mountPreview, previewClass, refreshAllPreviews, refreshPreviewsFor, unmountAllPreviews } from "./preview.ts";
+import { mountPreview, previewClass, refreshAllPreviews, refreshPreviewsFor, sweepPreviews, unmountAllPreviews } from "./preview.ts";
 import { blockString, blockUidFromElement, createChildBlock, focusedBlockUid, updateBlockString } from "./roam.ts";
 import { initSettings } from "./settings.ts";
 
@@ -90,6 +90,8 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
   const themeObserver = new MutationObserver(() => refreshAllPreviews());
   themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
+  const sweep = window.setInterval(sweepPreviews, 30_000);
+
   const palette = window.roamAlphaAPI.ui.commandPalette;
   palette.addCommand({ label: COMMANDS.insert, callback: () => void insertDrawingHere() });
   palette.addCommand({ label: COMMANDS.open, callback: openFocused });
@@ -99,6 +101,7 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
   cleanup = () => {
     observer.disconnect();
     themeObserver.disconnect();
+    window.clearInterval(sweep);
     for (const label of Object.values(COMMANDS)) palette.removeCommand({ label });
     void closeEditor();
     unmountAllPreviews();

@@ -3,7 +3,7 @@
 import { exportToSvg } from "@excalidraw/excalidraw";
 import type { DrawingData } from "./schema.ts";
 import { parseOptions } from "./blockString.ts";
-import { blockString, loadDrawing } from "./roam.ts";
+import { blockString, loadDrawing, unwatchAllBlocks, unwatchBlock, watchBlock } from "./roam.ts";
 import { getSettings } from "./settings.ts";
 import { resolveTheme } from "./theme.ts";
 
@@ -64,7 +64,20 @@ export async function mountPreview(host: HTMLElement, uid: string, handlers: Pre
   };
   if (!mounted.has(uid)) mounted.set(uid, new Set());
   mounted.get(uid)!.add(host);
+  // Edits from another window, device or the sidebar arrive through the
+  // pull-watch; our own saves call refreshPreviewsFor directly as well.
+  watchBlock(uid, () => scheduleRefresh(uid));
   await refreshPreview(host, uid);
+}
+
+const pending = new Map<string, number>();
+function scheduleRefresh(uid: string): void {
+  const existing = pending.get(uid);
+  if (existing !== undefined) window.clearTimeout(existing);
+  pending.set(uid, window.setTimeout(() => {
+    pending.delete(uid);
+    refreshPreviewsFor(uid);
+  }, 150));
 }
 
 export async function refreshPreview(host: HTMLElement, uid: string): Promise<void> {
@@ -73,7 +86,7 @@ export async function refreshPreview(host: HTMLElement, uid: string): Promise<vo
   const options = parseOptions(blockString(uid));
   const maxHeight = options.height ?? getSettings().maxPreviewHeight;
   host.classList.toggle("bex-dark", theme === "dark");
-  host.style.maxHeight = `${maxHeight}px`;
+  host.style.setProperty("--bex-max-height", `${maxHeight}px`);
   host.style.height = options.height ? `${options.height}px` : "";
   let svg: SVGSVGElement | null = null;
   try {
@@ -90,13 +103,16 @@ export async function refreshPreview(host: HTMLElement, uid: string): Promise<vo
     host.append(empty);
     return;
   }
+  // Natural size comes from the export; CSS scales it down (never up) to fit
+  // the block width and the max height while keeping the aspect ratio.
   const width = Number(svg.getAttribute("width")) || 0;
   const height = Number(svg.getAttribute("height")) || 0;
   svg.removeAttribute("width");
   svg.removeAttribute("height");
   if (width && height) {
-    svg.setAttribute("viewBox", svg.getAttribute("viewBox") ?? `0 0 ${width} ${height}`);
+    if (!svg.getAttribute("viewBox")) svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svg.style.aspectRatio = `${width} / ${height}`;
+    svg.style.width = `${width}px`;
   }
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   host.append(svg);
@@ -105,9 +121,26 @@ export async function refreshPreview(host: HTMLElement, uid: string): Promise<vo
 /** Re-renders every mounted Preview of a block; called after each save. */
 export function refreshPreviewsFor(uid: string): void {
   cache.delete(uid);
-  for (const host of mounted.get(uid) ?? []) {
+  const hosts = mounted.get(uid);
+  if (!hosts) return;
+  for (const host of hosts) {
     if (host.isConnected) void refreshPreview(host, uid);
-    else mounted.get(uid)?.delete(host);
+    else hosts.delete(host);
+  }
+  if (hosts.size === 0) forget(uid);
+}
+
+function forget(uid: string): void {
+  mounted.delete(uid);
+  cache.delete(uid);
+  unwatchBlock(uid);
+}
+
+/** Drops hosts Roam has re-rendered away; called periodically so watches don't leak. */
+export function sweepPreviews(): void {
+  for (const [uid, hosts] of mounted) {
+    for (const host of hosts) if (!host.isConnected) hosts.delete(host);
+    if (hosts.size === 0) forget(uid);
   }
 }
 
@@ -122,6 +155,7 @@ export function unmountAllPreviews(): void {
   }
   mounted.clear();
   cache.clear();
+  unwatchAllBlocks();
 }
 
 export function previewClass(): string {

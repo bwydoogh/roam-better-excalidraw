@@ -2,9 +2,13 @@
 
 /* Preview ------------------------------------------------------------- */
 .bex-preview {
-  display: block;
+  --bex-max-height: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
   min-height: 48px;
+  max-height: var(--bex-max-height);
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 6px;
@@ -18,9 +22,9 @@
 .bex-preview.bex-dark { background: #121212; border-color: rgba(255, 255, 255, 0.15); }
 .bex-preview svg {
   display: block;
-  width: 100%;
+  max-width: 100%;
+  max-height: min(100%, var(--bex-max-height));
   height: auto;
-  max-height: inherit;
 }
 .bex-preview-empty {
   padding: 14px;

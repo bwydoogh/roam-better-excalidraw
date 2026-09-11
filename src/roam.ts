@@ -65,14 +65,54 @@ export function focusedBlockUid(): string | null {
   return window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] ?? null;
 }
 
+/** Roam's dark theme adds Blueprint's `bp3-dark` to <body>; some themes add `rm-dark-theme`. */
 export function isDarkTheme(): boolean {
-  return document.body.classList.contains("rm-dark-theme") || document.documentElement.classList.contains("rm-dark-theme");
+  const classes = [...document.body.classList, ...document.documentElement.classList];
+  return classes.includes("bp3-dark") || classes.includes("rm-dark-theme");
 }
 
-/** Roam's block containers carry ids like `block-input-<window>-<uid>`; the uid is the last 9 characters. */
+/**
+ * The uid of the block a rendered component belongs to. An inline `((ref))`
+ * renders inside `.rm-block-ref[data-uid]`, which must win over the containing
+ * block; otherwise Roam's containers carry ids like `block-input-<window>-<uid>`
+ * where the uid is the last 9 characters.
+ */
 export function blockUidFromElement(element: Element): string | null {
+  const ref = element.closest<HTMLElement>(".rm-block-ref[data-uid]");
+  if (ref?.dataset.uid) return ref.dataset.uid;
   const container = element.closest<HTMLElement>('[id^="block-input-"]');
   const id = container?.id;
   if (!id || id.length < 9) return null;
   return id.slice(-9);
+}
+
+type PullWatchCallback = (before: RoamPullBlock | null, after: RoamPullBlock | null) => void;
+const watches = new Map<string, PullWatchCallback>();
+
+/** Watches a block's string and props; one watch per uid, idempotent. */
+export function watchBlock(uid: string, onChange: () => void): void {
+  if (watches.has(uid)) return;
+  const callback: PullWatchCallback = () => onChange();
+  watches.set(uid, callback);
+  try {
+    window.roamAlphaAPI.data.addPullWatch(PULL_PATTERN, `[:block/uid "${uid}"]`, callback);
+  } catch (error) {
+    console.warn("[better-excalidraw] addPullWatch failed", uid, error);
+    watches.delete(uid);
+  }
+}
+
+export function unwatchBlock(uid: string): void {
+  const callback = watches.get(uid);
+  if (!callback) return;
+  watches.delete(uid);
+  try {
+    window.roamAlphaAPI.data.removePullWatch(PULL_PATTERN, `[:block/uid "${uid}"]`, callback);
+  } catch (error) {
+    console.warn("[better-excalidraw] removePullWatch failed", uid, error);
+  }
+}
+
+export function unwatchAllBlocks(): void {
+  for (const uid of [...watches.keys()]) unwatchBlock(uid);
 }
