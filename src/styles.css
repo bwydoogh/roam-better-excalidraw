@@ -103,11 +103,33 @@
 .bex-gallery-thumb svg { display: block; max-width: 100%; max-height: 100%; height: auto; width: auto; }
 .bex-gallery-loading { color: #8a9ba8; font-size: 13px; }
 .bex-gallery-label {
-  padding: 6px 10px;
+  padding: 6px 10px 2px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .bex-modal.bex-dark .bex-gallery-label { border-top-color: rgba(255, 255, 255, 0.1); }
+.bex-gallery-meta {
+  display: flex;
+  flex-direction: column;
+  padding: 0 10px 8px;
+  font-size: 11px;
+  color: #8a9ba8;
+}
+.bex-gallery-sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #5c7080;
+}
+.bex-modal.bex-dark .bex-gallery-sort { color: #a7b6c2; }
+.bex-gallery-sort select { height: 26px; font-size: 12px; }
+
+/* Left-sidebar item ----------------------------------------------------- */
+.bex-sidebar-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.bex-sidebar-item .bp3-icon { flex: 0 0 auto; }
+.bex-sidebar-item-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

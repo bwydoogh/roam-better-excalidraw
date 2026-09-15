@@ -44,6 +44,35 @@ function scan(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>(BUTTON_SELECTOR).forEach(upgradeButton);
 }
 
+const SIDEBAR_ITEM_ID = "bex-sidebar-gallery";
+
+/** Adds a clickable "Excalidraw drawings" row to Roam's left sidebar. Idempotent;
+ *  Roam re-renders the sidebar freely, so this is re-run from the observer. */
+function ensureSidebarItem(): void {
+  const content = document.querySelector<HTMLElement>(".roam-sidebar-content");
+  if (!content || document.getElementById(SIDEBAR_ITEM_ID)) return;
+  const item = document.createElement("div");
+  item.id = SIDEBAR_ITEM_ID;
+  item.className = "log-button bex-sidebar-item";
+  item.setAttribute("role", "button");
+  item.tabIndex = 0;
+  const icon = document.createElement("span");
+  icon.className = "bp3-icon bp3-icon-media";
+  const text = document.createElement("span");
+  text.className = "bex-sidebar-item-text";
+  text.textContent = "Excalidraw drawings";
+  item.append(icon, text);
+  const open = () => openGallery(galleryHandlers);
+  item.onclick = open;
+  item.onkeydown = (event) => {
+    if (event.key === "Enter") open();
+  };
+  // Sit just above the Shortcuts section when present, else at the end.
+  const anchor = content.querySelector(".starred-pages-wrapper") ?? content.querySelector(".starred-pages");
+  if (anchor) anchor.insertAdjacentElement("beforebegin", item);
+  else content.append(item);
+}
+
 async function insertDrawingHere(): Promise<void> {
   const uid = focusedBlockUid();
   if (!uid) return toast("focus a block first");
@@ -97,9 +126,11 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
         else scan(node);
       }
     }
+    ensureSidebarItem();
   });
   observer.observe(document.body, { childList: true, subtree: true });
   scan(document.body);
+  ensureSidebarItem();
 
   const themeObserver = new MutationObserver(() => refreshAllPreviews());
   themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
@@ -118,6 +149,7 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
     themeObserver.disconnect();
     window.clearInterval(sweep);
     for (const label of Object.values(COMMANDS)) palette.removeCommand({ label });
+    document.getElementById(SIDEBAR_ITEM_ID)?.remove();
     closeGallery();
     void closeEditor();
     unmountAllPreviews();

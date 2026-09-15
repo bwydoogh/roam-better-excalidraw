@@ -121,6 +121,7 @@ export interface DrawingBlockRef {
   uid: string;
   string: string;
   page: string;
+  createTime: number;
   editTime: number;
 }
 
@@ -132,17 +133,18 @@ export interface DrawingBlockRef {
 export function listDrawingBlocks(): DrawingBlockRef[] {
   try {
     const rows = window.roamAlphaAPI.q(
-      `[:find ?uid ?string ?title ?time
+      `[:find ?uid ?string ?title ?created ?edited
         :where
         [?b :block/string ?string]
         [(clojure.string/includes? ?string "{{better-excalidraw")]
         [?b :block/uid ?uid]
-        [?b :edit/time ?time]
+        [?b :create/time ?created]
+        [?b :edit/time ?edited]
         [?b :block/page ?p]
         [?p :node/title ?title]]`,
-    ) as Array<[string, string, string, number]>;
+    ) as Array<[string, string, string, number, number]>;
     return rows
-      .map(([uid, string, page, editTime]) => ({ uid, string, page, editTime }))
+      .map(([uid, string, page, createTime, editTime]) => ({ uid, string, page, createTime, editTime }))
       .sort((a, b) => b.editTime - a.editTime);
   } catch (error) {
     console.warn("[better-excalidraw] listDrawingBlocks failed", error);
