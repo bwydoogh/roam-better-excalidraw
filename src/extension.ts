@@ -47,10 +47,18 @@ function scan(root: ParentNode): void {
 const SIDEBAR_ITEM_ID = "bex-sidebar-gallery";
 
 /** Adds a clickable "Excalidraw drawings" row to Roam's left sidebar. Idempotent;
- *  Roam re-renders the sidebar freely, so this is re-run from the observer. */
+ *  Roam re-renders the sidebar freely, so this is re-run from the observer.
+ *  Roam ships no left-sidebar API, so we anchor on the native `.log-button`
+ *  nav items (Daily Notes / Graph Overview / All Pages) — a stable class —
+ *  and fall back to the sidebar container. */
 function ensureSidebarItem(): void {
-  const content = document.querySelector<HTMLElement>(".roam-sidebar-content");
-  if (!content || document.getElementById(SIDEBAR_ITEM_ID)) return;
+  if (document.getElementById(SIDEBAR_ITEM_ID)) return;
+  const container = document.querySelector<HTMLElement>(".roam-sidebar-content")
+    ?? document.querySelector<HTMLElement>(".roam-sidebar-container");
+  const logButtons = (container ?? document).querySelectorAll<HTMLElement>(".log-button");
+  const lastLogButton = logButtons[logButtons.length - 1] ?? null;
+  if (!lastLogButton && !container) return;
+
   const item = document.createElement("div");
   item.id = SIDEBAR_ITEM_ID;
   item.className = "log-button bex-sidebar-item";
@@ -67,10 +75,9 @@ function ensureSidebarItem(): void {
   item.onkeydown = (event) => {
     if (event.key === "Enter") open();
   };
-  // Sit just above the Shortcuts section when present, else at the end.
-  const anchor = content.querySelector(".starred-pages-wrapper") ?? content.querySelector(".starred-pages");
-  if (anchor) anchor.insertAdjacentElement("beforebegin", item);
-  else content.append(item);
+  // Right below the last native nav item when present, else at the top.
+  if (lastLogButton) lastLogButton.insertAdjacentElement("afterend", item);
+  else container!.prepend(item);
 }
 
 async function insertDrawingHere(): Promise<void> {
