@@ -22,15 +22,17 @@ function sceneKey(drawing: DrawingData, theme: string): string {
   return `${drawing.elements.length}:${sum}:${theme}:${drawing.instanceId}`;
 }
 
-async function renderSvg(uid: string, drawing: DrawingData, theme: "light" | "dark"): Promise<SVGSVGElement | null> {
-  const key = sceneKey(drawing, theme);
-  const hit = cache.get(uid);
-  if (hit && hit.key === key) return hit.svg.cloneNode(true) as SVGSVGElement;
+/**
+ * Exports a scene to an SVG, resolving any stored images first. Pure of the
+ * per-block cache, so the Gallery can render thumbnails through the same path.
+ * Returns null for a scene with no visible elements.
+ */
+export async function renderSceneSvg(drawing: DrawingData, theme: "light" | "dark"): Promise<SVGSVGElement | null> {
   const live = (drawing.elements as Array<{ isDeleted?: boolean }>).filter((el) => !el.isDeleted);
   if (live.length === 0) return null;
   const stored = drawing.files as never;
   const files = { ...(drawing.files as object), ...(await resolveFiles(live as ImageLikeElement[], stored)) };
-  const svg = await exportToSvg({
+  return exportToSvg({
     elements: live as never,
     appState: {
       ...(drawing.appState as object),
@@ -41,6 +43,14 @@ async function renderSvg(uid: string, drawing: DrawingData, theme: "light" | "da
     files: files as never,
     exportPadding: 16,
   });
+}
+
+async function renderSvg(uid: string, drawing: DrawingData, theme: "light" | "dark"): Promise<SVGSVGElement | null> {
+  const key = sceneKey(drawing, theme);
+  const hit = cache.get(uid);
+  if (hit && hit.key === key) return hit.svg.cloneNode(true) as SVGSVGElement;
+  const svg = await renderSceneSvg(drawing, theme);
+  if (!svg) return null;
   cache.set(uid, { key, svg });
   return svg.cloneNode(true) as SVGSVGElement;
 }

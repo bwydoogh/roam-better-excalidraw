@@ -5,6 +5,7 @@ import "./styles.css";
 import type { ExtensionAPI } from "./roam-types.d.ts";
 import { COMPONENT, isDrawingBlock, isNativeDrawingBlock, toBetterExcalidraw, toNativeExcalidraw, unsupportedNativeTypes } from "./blockString.ts";
 import { closeEditor, openEditor } from "./editor.tsx";
+import { closeGallery, openGallery } from "./gallery.ts";
 import { mountPreview, previewClass, refreshAllPreviews, refreshPreviewsFor, sweepPreviews, unmountAllPreviews } from "./preview.ts";
 import { blockString, blockUidFromElement, createChildBlock, focusedBlockUid, loadDrawing, updateBlockString } from "./roam.ts";
 import { initSettings } from "./settings.ts";
@@ -15,6 +16,7 @@ const COMMANDS = {
   open: "Better Excalidraw: Open drawing editor",
   toBetter: "Better Excalidraw: Convert native drawing to Better Excalidraw",
   toNative: "Better Excalidraw: Convert back to native Excalidraw",
+  gallery: "Better Excalidraw: Show all drawings (gallery)",
 };
 
 
@@ -26,6 +28,7 @@ function toast(message: string): void {
 
 const editorHandlers = { onSaved: (uid: string) => refreshPreviewsFor(uid) };
 const previewHandlers = { onOpen: (uid: string) => openEditor(uid, editorHandlers) };
+const galleryHandlers = { onOpen: (uid: string) => openEditor(uid, editorHandlers) };
 
 function upgradeButton(button: HTMLElement): void {
   if (button.dataset.bexMounted === "1") return;
@@ -108,12 +111,14 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
   palette.addCommand({ label: COMMANDS.open, callback: openFocused });
   palette.addCommand({ label: COMMANDS.toBetter, callback: () => void convertFocused("toBetter") });
   palette.addCommand({ label: COMMANDS.toNative, callback: () => void convertFocused("toNative") });
+  palette.addCommand({ label: COMMANDS.gallery, callback: () => openGallery(galleryHandlers) });
 
   cleanup = () => {
     observer.disconnect();
     themeObserver.disconnect();
     window.clearInterval(sweep);
     for (const label of Object.values(COMMANDS)) palette.removeCommand({ label });
+    closeGallery();
     void closeEditor();
     unmountAllPreviews();
     document.querySelectorAll<HTMLElement>(`${BUTTON_SELECTOR}[data-bex-mounted]`).forEach((b) => delete b.dataset.bexMounted);

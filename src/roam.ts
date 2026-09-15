@@ -117,6 +117,39 @@ export function unwatchAllBlocks(): void {
   for (const uid of [...watches.keys()]) unwatchBlock(uid);
 }
 
+export interface DrawingBlockRef {
+  uid: string;
+  string: string;
+  page: string;
+  editTime: number;
+}
+
+/**
+ * Every block whose string mentions the component, newest edit first. Runs
+ * client-side through `q`, so it works on graphs the MCP servers cannot read.
+ * Callers should still filter with `isDrawingBlock` for an exact match.
+ */
+export function listDrawingBlocks(): DrawingBlockRef[] {
+  try {
+    const rows = window.roamAlphaAPI.q(
+      `[:find ?uid ?string ?title ?time
+        :where
+        [?b :block/string ?string]
+        [(clojure.string/includes? ?string "{{better-excalidraw")]
+        [?b :block/uid ?uid]
+        [?b :edit/time ?time]
+        [?b :block/page ?p]
+        [?p :node/title ?title]]`,
+    ) as Array<[string, string, string, number]>;
+    return rows
+      .map(([uid, string, page, editTime]) => ({ uid, string, page, editTime }))
+      .sort((a, b) => b.editTime - a.editTime);
+  } catch (error) {
+    console.warn("[better-excalidraw] listDrawingBlocks failed", error);
+    return [];
+  }
+}
+
 export function pageUidByTitle(title: string): string | null {
   try {
     const result = window.roamAlphaAPI.q(
