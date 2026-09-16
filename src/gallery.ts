@@ -6,20 +6,20 @@
 import { isDrawingBlock } from "./blockString.ts";
 import { renderSceneSvg } from "./preview.ts";
 import { listDrawingBlocks, loadDrawing, type DrawingBlockRef } from "./roam.ts";
-import { resolveTheme } from "./theme.ts";
+import { resolveTheme, roamSurfaceColors } from "./theme.ts";
 
 export interface GalleryHandlers {
   onOpen(uid: string): void;
 }
 
-type SortKey = "edited-desc" | "edited-asc" | "created-desc" | "created-asc" | "page-asc";
+type SortField = "edited" | "created" | "page";
+type SortDirection = "asc" | "desc";
 
-const SORTS: Array<{ key: SortKey; label: string; compare: (a: DrawingBlockRef, b: DrawingBlockRef) => number }> = [
-  { key: "edited-desc", label: "Recently edited", compare: (a, b) => b.editTime - a.editTime },
-  { key: "edited-asc", label: "Least recently edited", compare: (a, b) => a.editTime - b.editTime },
-  { key: "created-desc", label: "Newest first", compare: (a, b) => b.createTime - a.createTime },
-  { key: "created-asc", label: "Oldest first", compare: (a, b) => a.createTime - b.createTime },
-  { key: "page-asc", label: "Page A–Z", compare: (a, b) => a.page.localeCompare(b.page) || b.editTime - a.editTime },
+/** Ascending comparators; the direction toggle flips the sign. */
+const SORT_FIELDS: Array<{ key: SortField; label: string; compare: (a: DrawingBlockRef, b: DrawingBlockRef) => number }> = [
+  { key: "edited", label: "Last edited", compare: (a, b) => a.editTime - b.editTime },
+  { key: "created", label: "Created", compare: (a, b) => a.createTime - b.createTime },
+  { key: "page", label: "Page", compare: (a, b) => a.page.localeCompare(b.page) || a.editTime - b.editTime },
 ];
 
 interface Tile {
@@ -32,7 +32,9 @@ interface ActiveGallery {
   grid: HTMLElement;
   onKeyDown: (event: KeyboardEvent) => void;
   tiles: Tile[];
-  sort: SortKey;
+  field: SortField;
+  direction: SortDirection;
+  directionButton: HTMLButtonElement;
 }
 
 let active: ActiveGallery | null = null;
@@ -61,6 +63,11 @@ export function openGallery(handlers: GalleryHandlers): void {
   container.className = "bex-modal bex-gallery";
   container.tabIndex = -1;
   container.classList.toggle("bex-dark", theme === "dark");
+  // Blend with whatever Roam is rendering right now (theme, system light/dark)
+  // instead of a hardcoded white or near-black.
+  const surface = roamSurfaceColors();
+  container.style.background = surface.background;
+  container.style.color = surface.color;
 
   const bar = document.createElement("div");
   bar.className = "bex-modal-bar";
@@ -72,17 +79,23 @@ export function openGallery(handlers: GalleryHandlers): void {
   actions.className = "bex-modal-actions";
   const sortLabel = document.createElement("label");
   sortLabel.className = "bex-gallery-sort";
-  sortLabel.textContent = "Sort ";
+  sortLabel.textContent = "Sort by ";
   const sortSelect = document.createElement("select");
   sortSelect.className = "bp3-input";
-  for (const { key, label } of SORTS) {
+  for (const { key, label } of SORT_FIELDS) {
     const option = document.createElement("option");
     option.value = key;
     option.textContent = label;
     sortSelect.append(option);
   }
-  sortSelect.onchange = () => applySort(sortSelect.value as SortKey);
-  sortLabel.append(sortSelect);
+  sortSelect.onchange = () => applySort(sortSelect.value as SortField, active?.direction ?? "desc");
+  const directionButton = document.createElement("button");
+  directionButton.className = "bp3-button bp3-minimal bex-gallery-direction";
+  directionButton.onclick = () => {
+    if (!active) return;
+    applySort(active.field, active.direction === "desc" ? "asc" : "desc");
+  };
+  sortLabel.append(sortSelect, directionButton);
   const closeButton = document.createElement("button");
   closeButton.className = "bp3-button bp3-minimal bex-modal-close";
   closeButton.textContent = "Close";
@@ -104,7 +117,8 @@ export function openGallery(handlers: GalleryHandlers): void {
     }
   };
   container.addEventListener("keydown", onKeyDown);
-  active = { container, grid, onKeyDown, tiles: [], sort: "edited-desc" };
+  active = { container, grid, onKeyDown, tiles: [], field: "edited", direction: "desc", directionButton };
+  renderDirection();
   container.focus();
 
   void populate(container, grid, title, theme, handlers);
@@ -210,13 +224,26 @@ async function renderThumb(thumb: HTMLElement, ref: DrawingBlockRef, theme: "lig
 }
 
 /** Reorders the already-rendered tiles in place; no thumbnail is re-rendered. */
-function applySort(key: SortKey): void {
+function applySort(field: SortField, direction: SortDirection): void {
   if (!active) return;
-  active.sort = key;
-  const compare = SORTS.find((s) => s.key === key)?.compare;
+  active.field = field;
+  active.direction = direction;
+  renderDirection();
+  const compare = SORT_FIELDS.find((s) => s.key === field)?.compare;
   if (!compare) return;
-  active.tiles.sort((a, b) => compare(a.ref, b.ref));
+  const sign = direction === "desc" ? -1 : 1;
+  active.tiles.sort((a, b) => sign * compare(a.ref, b.ref));
   for (const tile of active.tiles) active.grid.append(tile.el);
+}
+
+/** Direction toggle: arrow plus a label that reads naturally for the field. */
+function renderDirection(): void {
+  if (!active) return;
+  const { field, direction, directionButton } = active;
+  const desc = direction === "desc";
+  const label = field === "page" ? (desc ? "Z–A" : "A–Z") : desc ? "Newest first" : "Oldest first";
+  directionButton.textContent = `${desc ? "↓" : "↑"} ${label}`;
+  directionButton.title = "Toggle sort direction";
 }
 
 export function closeGallery(): void {
