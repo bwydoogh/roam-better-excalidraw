@@ -48,16 +48,18 @@ const SIDEBAR_ITEM_ID = "bex-sidebar-gallery";
 
 /** Adds a clickable "Excalidraw drawings" row to Roam's left sidebar. Idempotent;
  *  Roam re-renders the sidebar freely, so this is re-run from the observer.
- *  Roam ships no left-sidebar API, so we anchor on the native `.log-button`
- *  nav items (Daily Notes / Graph Overview / All Pages) — a stable class —
- *  and fall back to the sidebar container. */
+ *  Roam ships no left-sidebar API, so we anchor on its nav rows. Only
+ *  top-level rows count: other extensions (speech-to-roam, for one) nest
+ *  their own `.log-button` inside a widget, and landing in there hides the
+ *  item. Roam's own rows carry `rm-left-sidebar__*`; prefer those. */
 function ensureSidebarItem(): void {
   if (document.getElementById(SIDEBAR_ITEM_ID)) return;
-  const container = document.querySelector<HTMLElement>(".roam-sidebar-content")
-    ?? document.querySelector<HTMLElement>(".roam-sidebar-container");
-  const logButtons = (container ?? document).querySelectorAll<HTMLElement>(".log-button");
-  const lastLogButton = logButtons[logButtons.length - 1] ?? null;
-  if (!lastLogButton && !container) return;
+  const content = document.querySelector<HTMLElement>(".roam-sidebar-content");
+  if (!content) return;
+  const rows = [...content.querySelectorAll<HTMLElement>(":scope > .log-button")];
+  const native = rows.filter((row) => /(^|\s)rm-left-sidebar__/.test(row.className));
+  const candidates = native.length > 0 ? native : rows;
+  const anchor = candidates[candidates.length - 1] ?? null;
 
   const item = document.createElement("div");
   item.id = SIDEBAR_ITEM_ID;
@@ -75,9 +77,10 @@ function ensureSidebarItem(): void {
   item.onkeydown = (event) => {
     if (event.key === "Enter") open();
   };
-  // Right below the last native nav item when present, else at the top.
-  if (lastLogButton) lastLogButton.insertAdjacentElement("afterend", item);
-  else container!.prepend(item);
+  // Right below the last native nav row when present, else at the end.
+  if (anchor) anchor.insertAdjacentElement("afterend", item);
+  else content.append(item);
+  console.info(`[better-excalidraw] sidebar item mounted after: ${anchor?.className ?? "(no nav row, appended)"}`);
 }
 
 async function insertDrawingHere(): Promise<void> {
