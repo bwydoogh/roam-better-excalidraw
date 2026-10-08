@@ -12,6 +12,72 @@ import {
 } from "../src/blockString.ts";
 import { hasDrawingProps, mergeDrawingProps, readDrawing } from "../src/schema.ts";
 import { findRoamLinks, textUnderPointer } from "../src/links.ts";
+import { initSettings } from "../src/settings.ts";
+import { resolveTheme, watchTheme } from "../src/theme.ts";
+
+test("theme follows the selected source live and removes its listeners", () => {
+  const originals = Object.fromEntries(["window", "document", "MutationObserver"].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  let selected = "system";
+  let mutation;
+  let disconnected = false;
+  const watched = [];
+  const listeners = new Set();
+  const media = {
+    matches: false,
+    addEventListener: (event, fn) => { assert.equal(event, "change"); listeners.add(fn); },
+    removeEventListener: (event, fn) => { assert.equal(event, "change"); listeners.delete(fn); },
+  };
+  const body = { classList: [] };
+  const html = { classList: [] };
+  try {
+    globalThis.window = { matchMedia: (query) => { assert.equal(query, "(prefers-color-scheme: dark)"); return media; } };
+    globalThis.document = { body, documentElement: html };
+    globalThis.MutationObserver = class {
+      constructor(fn) { mutation = fn; }
+      observe(target) { watched.push(target); }
+      disconnect() { disconnected = true; }
+    };
+    initSettings({ settings: { get: (key) => key === "theme" ? selected : undefined, panel: { create() {} } } });
+    assert.equal(resolveTheme(), "light");
+    const changes = [];
+    const unwatch = watchTheme((theme) => changes.push(theme));
+    assert.deepEqual(watched, [body, html]);
+    media.matches = true;
+    for (const listener of listeners) listener();
+    assert.deepEqual(changes, ["dark"]);
+    body.classList = ["bp3-dark"];
+    mutation();
+    assert.deepEqual(changes, ["dark"]);
+    media.matches = false;
+    for (const listener of listeners) listener();
+    assert.deepEqual(changes, ["dark", "light"]);
+    selected = "auto";
+    mutation();
+    assert.equal(resolveTheme(), "dark");
+    body.classList = [];
+    mutation();
+    html.classList = ["rm-dark-theme"];
+    mutation();
+    assert.deepEqual(changes, ["dark", "light", "dark", "light", "dark"]);
+    for (const fixed of ["light", "dark"]) {
+      selected = fixed;
+      assert.equal(resolveTheme(), fixed);
+      media.matches = !media.matches;
+      assert.equal(resolveTheme(), fixed);
+    }
+    selected = "unknown";
+    assert.equal(resolveTheme(), "dark");
+    unwatch();
+    unwatch();
+    assert.equal(listeners.size, 0);
+    assert.equal(disconnected, true);
+  } finally {
+    for (const [key, descriptor] of Object.entries(originals)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+});
 
 const NATIVE = '{{[[excalidraw]]}} {{-: Text elements in drawing: Gitlab ; Push tag ; start "automated\ndeployment" }}';
 

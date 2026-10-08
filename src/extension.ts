@@ -9,6 +9,7 @@ import { closeGallery, openGallery } from "./gallery.ts";
 import { mountPreview, previewClass, refreshAllPreviews, refreshPreviewsFor, sweepPreviews, unmountAllPreviews } from "./preview.ts";
 import { blockString, blockUidFromElement, createChildBlock, focusedBlockUid, loadDrawing, updateBlockString } from "./roam.ts";
 import { initSettings } from "./settings.ts";
+import { watchTheme } from "./theme.ts";
 
 const BUTTON_SELECTOR = `button.bp3-button.rm-xparser-default-${COMPONENT}`;
 const COMMANDS = {
@@ -142,8 +143,7 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
   scan(document.body);
   ensureSidebarItem();
 
-  const themeObserver = new MutationObserver(() => refreshAllPreviews());
-  themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  const unwatchTheme = watchTheme(() => refreshAllPreviews());
 
   const sweep = window.setInterval(sweepPreviews, 30_000);
 
@@ -156,7 +156,7 @@ function onload({ extensionAPI }: { extensionAPI: ExtensionAPI }): void {
 
   cleanup = () => {
     observer.disconnect();
-    themeObserver.disconnect();
+    unwatchTheme();
     window.clearInterval(sweep);
     for (const label of Object.values(COMMANDS)) palette.removeCommand({ label });
     document.getElementById(SIDEBAR_ITEM_ID)?.remove();

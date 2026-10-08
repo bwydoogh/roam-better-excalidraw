@@ -3,14 +3,14 @@
 import { Excalidraw, exportToBlob, getSceneVersion, restoreAppState, restoreElements } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, PointerDownState } from "@excalidraw/excalidraw/types";
 import { createRoot, type Root } from "react-dom/client";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { filesToPersist, resolveFiles, uploadPendingFiles, type ImageLikeElement } from "./files.ts";
 import { loadLibrary, saveLibrary } from "./library.ts";
 import { findRoamLinks, textUnderPointer } from "./links.ts";
 import { insertImageChild, loadDrawing, openInMainWindow, openInSidebar, pageUidByTitle, saveDrawing } from "./roam.ts";
 import type { DrawingData } from "./schema.ts";
 import { getSettings } from "./settings.ts";
-import { resolveTheme } from "./theme.ts";
+import { resolveTheme, watchTheme } from "./theme.ts";
 
 interface ActiveEditor {
   uid: string;
@@ -54,6 +54,7 @@ export interface EditorHandlers {
 
 interface EditorProps {
   uid: string;
+  container: HTMLElement;
   initial: DrawingData;
   onSaved(uid: string): void;
   registerClose(fn: () => Promise<void>): void;
@@ -95,7 +96,7 @@ function followLink(api: ExcalidrawImperativeAPI, state: PointerDownState, event
   else void closeEditor().then(() => openInMainWindow(target));
 }
 
-function EditorView({ uid, initial, onSaved, registerClose, registerApi }: EditorProps) {
+function EditorView({ uid, container, initial, onSaved, registerClose, registerApi }: EditorProps) {
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const lastSavedVersion = useRef<number>(getSceneVersion(initial.elements as never));
   // Excalidraw applies initialData asynchronously after mount and fires
@@ -105,7 +106,18 @@ function EditorView({ uid, initial, onSaved, registerClose, registerApi }: Edito
   const timer = useRef<number | null>(null);
   const saving = useRef<Promise<void>>(Promise.resolve());
   const settings = useMemo(() => getSettings(), []);
-  const theme = useMemo(() => resolveTheme(), []);
+  const initialTheme = useMemo(() => resolveTheme(), []);
+  const [theme, setTheme] = useState(initialTheme);
+
+  useEffect(() => {
+    const apply = (next: "light" | "dark") => {
+      container.classList.toggle("bex-dark", next === "dark");
+      setTheme(next);
+    };
+    const unwatch = watchTheme(apply);
+    apply(resolveTheme());
+    return unwatch;
+  }, [container]);
 
   const initialData = useMemo(() => {
     const appState = restoreAppState(initial.appState as never, null);
@@ -115,13 +127,13 @@ function EditorView({ uid, initial, onSaved, registerClose, registerApi }: Edito
         ...appState,
         gridModeEnabled: settings.gridMode || appState.gridModeEnabled,
         objectsSnapModeEnabled: settings.snapMode || appState.objectsSnapModeEnabled,
-        theme,
+        theme: initialTheme,
         collaborators: new Map(),
       },
       files: initial.files as never,
       scrollToContent: true,
     };
-  }, [initial, settings.gridMode, settings.snapMode, theme]);
+  }, [initial, settings.gridMode, settings.snapMode, initialTheme]);
 
   const persist = async (force: boolean) => {
     const api = apiRef.current;
@@ -304,6 +316,7 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
   root.render(
     <EditorView
       uid={uid}
+      container={container}
       initial={initial}
       onSaved={handlers.onSaved}
       registerClose={(fn) => {

@@ -11,6 +11,7 @@ import { resolveTheme } from "./theme.ts";
 const CLASS = "bex-preview";
 const cache = new Map<string, { key: string; svg: SVGSVGElement }>();
 const mounted = new Map<string, Set<HTMLElement>>();
+const renders = new WeakMap<HTMLElement, number>();
 
 function sceneKey(drawing: DrawingData, theme: string): string {
   // Cheap fingerprint: element count + summed versions + theme. Elements carry a
@@ -94,6 +95,8 @@ function scheduleRefresh(uid: string): void {
 }
 
 export async function refreshPreview(host: HTMLElement, uid: string): Promise<void> {
+  const render = (renders.get(host) ?? 0) + 1;
+  renders.set(host, render);
   const drawing = loadDrawing(uid);
   const theme = resolveTheme();
   const options = parseOptions(blockString(uid));
@@ -110,7 +113,7 @@ export async function refreshPreview(host: HTMLElement, uid: string): Promise<vo
   } catch (error) {
     console.warn("[better-excalidraw] preview render failed", uid, error);
   }
-  if (!host.isConnected) return;
+  if (!host.isConnected || renders.get(host) !== render) return;
   host.replaceChildren();
   if (!svg) {
     const empty = document.createElement("div");

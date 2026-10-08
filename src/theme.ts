@@ -3,8 +3,29 @@ import { getSettings } from "./settings.ts";
 
 export function resolveTheme(): "light" | "dark" {
   const { theme } = getSettings();
+  if (theme === "system") return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   if (theme !== "auto") return theme;
   return isDarkTheme() ? "dark" : "light";
+}
+
+/** Follow changes without reopening the Editor; only notify when its theme changes. */
+export function watchTheme(onChange: (theme: "light" | "dark") => void): () => void {
+  let current = resolveTheme();
+  const update = () => {
+    const next = resolveTheme();
+    if (next === current) return;
+    current = next;
+    onChange(next);
+  };
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  media.addEventListener("change", update);
+  const observer = new MutationObserver(update);
+  observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => {
+    media.removeEventListener("change", update);
+    observer.disconnect();
+  };
 }
 
 const SURFACE_SELECTORS = [".roam-body-main", ".roam-article", ".roam-app", ".roam-body", "body"];
