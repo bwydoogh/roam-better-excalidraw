@@ -58,6 +58,19 @@
   flex: 0 0 auto;
 }
 .bex-modal.bex-dark .bex-modal-bar { border-bottom-color: rgba(255, 255, 255, 0.15); }
+/* Blueprint's minimal button hardcodes dark text unless inside .bp3-dark, which
+   we do not set (it would leak into Excalidraw). In dark, follow the modal's
+   own text colour (Editor: #ddd, Gallery: Roam's surface colour) and use
+   Blueprint's dark-mode grey tints, which read on any background. */
+.bex-modal.bex-dark .bex-modal-bar .bp3-button { color: inherit; }
+.bex-modal.bex-dark .bex-modal-bar .bp3-button:hover { background: rgba(138, 155, 168, 0.15); color: inherit; }
+.bex-modal.bex-dark .bex-modal-bar .bp3-button:active { background: rgba(138, 155, 168, 0.3); color: inherit; }
+.bex-modal.bex-dark .bex-modal-bar .bp3-button:disabled,
+.bex-modal.bex-dark .bex-modal-bar .bp3-button:disabled:hover {
+  background: none;
+  color: inherit;
+  opacity: 0.45;
+}
 .bex-modal-title { font-weight: 600; }
 .bex-modal-actions { display: flex; gap: 6px; }
 .bex-modal-canvas { flex: 1 1 auto; min-height: 0; position: relative; }
