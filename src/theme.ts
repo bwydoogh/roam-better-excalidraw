@@ -1,11 +1,9 @@
-import { isDarkTheme } from "./roam.ts";
 import { getSettings } from "./settings.ts";
 
 export function resolveTheme(): "light" | "dark" {
   const { theme } = getSettings();
-  if (theme === "system") return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  if (theme !== "auto") return theme;
-  return isDarkTheme() ? "dark" : "light";
+  if (theme !== "system") return theme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 /** Follow changes without reopening the Editor; only notify when its theme changes. */
@@ -19,13 +17,7 @@ export function watchTheme(onChange: (theme: "light" | "dark") => void): () => v
   };
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   media.addEventListener("change", update);
-  const observer = new MutationObserver(update);
-  observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-  return () => {
-    media.removeEventListener("change", update);
-    observer.disconnect();
-  };
+  return () => media.removeEventListener("change", update);
 }
 
 const SURFACE_SELECTORS = [".roam-body-main", ".roam-article", ".roam-app", ".roam-body", "body"];

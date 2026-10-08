@@ -116,12 +116,12 @@ and must be walked through every release.
    applies when no override is present.
 9. **Sidebar and refs.** Open the block in the right sidebar and via `((ref))`
    on another page. Each shows a Preview; editing one refreshes all after save.
-10. **Dark theme.** With Theme set to `auto`, toggle Roam's theme; Previews and
-    an open Editor update. With `system`, switch the device between light and
-    dark while the Editor is open: its canvas and toolbar and the Previews
-    update without losing edits, selection or zoom. Roam's theme should not
-    affect `system`. Fixed `light` and `dark` ignore both theme changes.
-    Close/reopen and reload the extension to check listener cleanup.
+10. **Dark theme.** With Theme set to `system`, switch the device between
+    light and dark while the Editor is open: its canvas and toolbar and the
+    Previews update without losing edits, selection or zoom. Fixed `light` and
+    `dark` ignore the device. A graph that still has the retired `auto` stored
+    behaves as `system`. Close/reopen and reload the extension to check
+    listener cleanup.
 11. **Reload.** Depot dev mode reload: no duplicated Previews, no leaked
     commands in the command palette, one Editor at most.
 12. **Images.** Paste an image into the Editor. Within the autosave delay the

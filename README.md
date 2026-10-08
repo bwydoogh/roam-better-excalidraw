@@ -34,11 +34,11 @@ drawing: convert back and Roam renders it again.
 
 ## Settings
 
-Maximum preview height and width, theme (auto / system / light / dark), autosave delay,
+Maximum preview height and width, theme (system / light / dark), autosave delay,
 editor language, grid-by-default, and snap-to-objects-by-default.
 
-`auto` follows Roam's theme; `system` follows your device's light/dark preference.
-Previews and an open Editor update when the selected theme changes.
+`system` (the default) follows your device's light/dark preference; Previews
+and an open Editor switch along when the device does.
 
 ## Development
 

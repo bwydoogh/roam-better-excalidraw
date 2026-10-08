@@ -66,11 +66,6 @@ export function focusedBlockUid(): string | null {
 }
 
 /** Roam's dark theme adds Blueprint's `bp3-dark` to <body>; some themes add `rm-dark-theme`. */
-export function isDarkTheme(): boolean {
-  const classes = [...document.body.classList, ...document.documentElement.classList];
-  return classes.includes("bp3-dark") || classes.includes("rm-dark-theme");
-}
-
 /**
  * The uid of the block a rendered component belongs to. An inline `((ref))`
  * renders inside `.rm-block-ref[data-uid]`, which must win over the containing

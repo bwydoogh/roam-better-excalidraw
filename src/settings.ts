@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "./roam-types.d.ts";
 
-export type ThemeSetting = "auto" | "system" | "light" | "dark";
+export type ThemeSetting = "system" | "light" | "dark";
 
 export interface Settings {
   maxPreviewHeight: number;
@@ -15,7 +15,7 @@ export interface Settings {
 const DEFAULTS: Settings = {
   maxPreviewHeight: 500,
   maxPreviewWidth: 0,
-  theme: "auto",
+  theme: "system",
   autosaveDelayMs: 1000,
   langCode: "en",
   gridMode: false,
@@ -44,8 +44,8 @@ export function initSettings(extensionAPI: ExtensionAPI): void {
       {
         id: "theme",
         name: "Theme",
-        description: "auto follows Roam's theme; system follows your device's light/dark preference.",
-        action: { type: "select", items: ["auto", "system", "light", "dark"] },
+        description: "system follows your device's light/dark preference.",
+        action: { type: "select", items: ["system", "light", "dark"] },
       },
       {
         id: "autosaveDelayMs",
@@ -87,7 +87,8 @@ export function getSettings(): Settings {
   return {
     maxPreviewHeight: number("maxPreviewHeight", DEFAULTS.maxPreviewHeight),
     maxPreviewWidth: number("maxPreviewWidth", DEFAULTS.maxPreviewWidth),
-    theme: theme === "light" || theme === "dark" || theme === "system" ? theme : "auto",
+    // Anything else, including the retired "auto", falls back to system.
+    theme: theme === "light" || theme === "dark" ? theme : "system",
     autosaveDelayMs: number("autosaveDelayMs", DEFAULTS.autosaveDelayMs),
     langCode: typeof lang === "string" && lang.trim() ? lang.trim() : DEFAULTS.langCode,
     gridMode: api?.settings.get("gridMode") === true,
