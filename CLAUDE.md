@@ -4,6 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Read `CONTEXT.md` first: it is the glossary (Drawing, Drawing block, Native drawing, Convert, Text mirror, Preview, Editor, Library, Height override, Width override). Use those words in code, comments and commits. Decisions with real trade-offs live in `docs/adr/`.
 
+## Development flow: supervisor, implementer, reviewer
+
+When asked to develop something (feature, fix, refactor), the main session is the **supervisor** and does not edit `src/` itself:
+
+1. Clarify the request if it is genuinely ambiguous, then split it into scoped tasks.
+2. Hand each task to the `implementer` agent (`.claude/agents/implementer.md`). Independent tasks may run in parallel; tasks touching the same files run in sequence.
+3. Hand the result to the `reviewer` agent (`.claude/agents/reviewer.md`) with the original task and the implementer's report.
+4. On `CHANGES REQUESTED`, send the must-fix findings back to the `implementer`, then review again. At most two fix rounds; after that, report the open findings to the user instead of looping.
+5. Report to the user: what changed, the review verdict, and the remaining browser-only checks. Commit or deploy only when the user asks.
+
+Exceptions, handled directly without delegating: questions, docs-only edits, and one-line trivial fixes the user explicitly calls trivial.
+
 ## Commands
 
 - `npm run build` — bundle `src/` (TypeScript + Excalidraw) into the root `extension.js` and `extension.css`. **Run after every source edit.**
