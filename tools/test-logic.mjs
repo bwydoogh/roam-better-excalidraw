@@ -12,6 +12,7 @@ import {
 } from "../src/blockString.ts";
 import { hasDrawingProps, mergeDrawingProps, readDrawing } from "../src/schema.ts";
 import { findRoamLinks, textUnderPointer } from "../src/links.ts";
+import { PRESENTATION_STATE_KEYS, moveSlide, presentationFrames, presentationRestoreState, slideCounter, slideKeyAction } from "../src/presentation.ts";
 import { getSettings, initSettings } from "../src/settings.ts";
 import { resolveTheme, watchTheme } from "../src/theme.ts";
 
@@ -165,4 +166,66 @@ test("textUnderPointer follows a container to its label", () => {
 test("unsupportedNativeTypes flags only live, non-native element types", () => {
   assert.deepEqual(unsupportedNativeTypes([{ type: "rectangle" }, { type: "text" }, { type: "image" }]), []);
   assert.deepEqual(unsupportedNativeTypes([{ type: "stickynote" }, { type: "video" }, { type: "stickynote" }, { type: "document", isDeleted: true }]), ["stickynote", "video"]);
+});
+
+test("presentationFrames keeps live frames in scene order", () => {
+  const elements = [
+    { id: "a", type: "rectangle" },
+    { id: "f2", type: "frame" },
+    { id: "gone", type: "frame", isDeleted: true },
+    { id: "m", type: "magicframe" },
+    { id: "f1", type: "frame" },
+    { id: "t", type: "text" },
+  ];
+  assert.deepEqual(presentationFrames(elements).map((el) => el.id), ["f2", "m", "f1"]);
+  assert.deepEqual(presentationFrames([{ type: "rectangle" }, { type: "frame", isDeleted: true }]), []);
+});
+
+test("moveSlide clamps at both ends", () => {
+  assert.equal(moveSlide(0, 3, "next"), 1);
+  assert.equal(moveSlide(2, 3, "next"), 2);
+  assert.equal(moveSlide(0, 3, "previous"), 0);
+  assert.equal(moveSlide(2, 3, "previous"), 1);
+  assert.equal(moveSlide(1, 3, "first"), 0);
+  assert.equal(moveSlide(0, 3, "last"), 2);
+  assert.equal(moveSlide(9, 3, "previous"), 1);
+  assert.equal(moveSlide(-4, 3, "next"), 1);
+  assert.equal(moveSlide(0, 0, "next"), 0);
+  assert.equal(moveSlide(0, 0, "last"), 0);
+});
+
+test("slideKeyAction maps presentation keys", () => {
+  for (const key of ["ArrowRight", "ArrowDown", " ", "PageDown"]) assert.equal(slideKeyAction(key), "next");
+  for (const key of ["ArrowLeft", "ArrowUp", "PageUp"]) assert.equal(slideKeyAction(key), "previous");
+  assert.equal(slideKeyAction("Home"), "first");
+  assert.equal(slideKeyAction("End"), "last");
+  assert.equal(slideKeyAction("Escape"), "leave");
+  assert.equal(slideKeyAction("a"), null);
+  assert.equal(slideKeyAction("toString"), null);
+});
+
+test("slideCounter is 1-based", () => {
+  assert.equal(slideCounter(2, 7), "3 / 7");
+  assert.equal(slideCounter(0, 1), "1 / 1");
+  assert.equal(slideCounter(0, 0), "");
+});
+
+test("presentationRestoreState picks exactly the keys a Presentation changes", () => {
+  const zoom = { value: 1.5 };
+  const frameRendering = { enabled: true, name: true, outline: true, clip: true };
+  const appState = {
+    viewModeEnabled: false,
+    zenModeEnabled: false,
+    frameRendering,
+    scrollX: 10,
+    scrollY: -20,
+    zoom,
+    scrollConstraints: null,
+    theme: "dark",
+    gridModeEnabled: true,
+  };
+  const restore = presentationRestoreState(appState);
+  assert.deepEqual(Object.keys(restore).sort(), [...PRESENTATION_STATE_KEYS].sort());
+  assert.deepEqual(restore, { viewModeEnabled: false, zenModeEnabled: false, frameRendering, scrollX: 10, scrollY: -20, zoom, scrollConstraints: null });
+  assert.deepEqual(presentationRestoreState({ scrollX: 1 }), { scrollX: 1 });
 });

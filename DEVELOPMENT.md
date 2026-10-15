@@ -141,6 +141,26 @@ and must be walked through every release.
 17. **Convert-back warning.** Add a sticky note (nightly feature) to a
     drawing, run "Convert back to native Excalidraw": a confirm dialog names
     `stickynote`. Cancel keeps the block untouched.
+18. **Presentation.** Open a drawing without frames: the "Present" button in
+    the Editor bar is disabled (tooltip says to add a frame). Add three frames
+    with some content each: the button enables. Click "Present": the Editor goes
+    full screen, the bar and Excalidraw's toolbars are hidden, frame outlines
+    and names are gone but content is still clipped to each frame, and the
+    first frame fills the screen with a "1 / 3" counter bottom right. Slides
+    follow scene order (the order the frames were created). ArrowRight,
+    ArrowDown, Space and PageDown advance; ArrowLeft, ArrowUp and
+    PageUp go back; Home and End jump to the first and last; nothing wraps.
+    Escape leaves the Presentation and the Editor stays open with the zoom,
+    scroll, toolbars and frame outlines exactly as before; a second Escape
+    then closes the Editor as usual. Leaving full screen another way (the
+    browser's own exit) also ends it and keeps the Editor open. Closing the
+    Editor while presenting must not save the Presentation's view: start a
+    Presentation and run `window.__betterExcalidrawCleanup()` in the
+    console. The Editor closes; the block's `excalidraw/state-json` has
+    `viewModeEnabled` and `zenModeEnabled` false, `frameRendering` with
+    `name` and `outline` true, and the pre-Presentation `scrollX`, `scrollY`
+    and `zoom`; reopening shows the normal Editor at the old position. In
+    dark theme the "Present" button is readable, both enabled and disabled.
 13. **Fonts offline.** Disconnect from the network, reload Roam, open a drawing
     with hand-drawn text: the Excalifont glyphs render, not a fallback sans.
 

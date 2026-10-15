@@ -76,6 +76,27 @@
 .bex-modal-canvas { flex: 1 1 auto; min-height: 0; position: relative; }
 .bex-modal-canvas .excalidraw { height: 100%; }
 
+/* Presentation: only the slide and a small counter; the bar and Excalidraw's
+   own UI (zen-mode exit button, toasts, "scroll back to content") are hidden. */
+.bex-modal.bex-presenting .bex-modal-bar,
+.bex-modal.bex-presenting .excalidraw .layer-ui__wrapper { display: none; }
+.bex-presentation-counter { display: none; }
+.bex-modal.bex-presenting .bex-presentation-counter {
+  display: block;
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
+}
+.bex-modal.bex-dark.bex-presenting .bex-presentation-counter { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.6); }
+
 /* Gallery --------------------------------------------------------------- */
 .bex-gallery-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; }
 .bex-gallery-grid {

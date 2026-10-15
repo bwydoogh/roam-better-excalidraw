@@ -14,3 +14,4 @@ Glossary for the Roam Depot extension "Better Excalidraw". Terms only, no implem
 - **Library**: the user's personal collection of reusable Excalidraw shapes, shared by every Drawing and stored in the graph so it follows the user across devices.
 - **Height override**: a per-Drawing-block setting in the block text that fixes the Preview height instead of the global maximum.
 - **Width override**: a per-Drawing-block setting in the block text that caps the Preview width instead of the global maximum.
+- **Presentation**: showing a Drawing's frames one at a time, full screen, in scene order, from the Editor.

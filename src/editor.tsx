@@ -1,12 +1,14 @@
 // The Editor: a full-size modal hosting Excalidraw, autosaving to the block.
 // At most one Editor is open at a time; opening a second focuses the first.
-import { Excalidraw, exportToBlob, getSceneVersion, restoreAppState, restoreElements } from "@excalidraw/excalidraw";
-import type { ExcalidrawImperativeAPI, PointerDownState } from "@excalidraw/excalidraw/types";
+import { CaptureUpdateAction, Excalidraw, exportToBlob, getSceneVersion, restoreAppState, restoreElements } from "@excalidraw/excalidraw";
+import type { AppState, ExcalidrawImperativeAPI, PointerDownState } from "@excalidraw/excalidraw/types";
+import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { filesToPersist, resolveFiles, uploadPendingFiles, type ImageLikeElement } from "./files.ts";
 import { loadLibrary, saveLibrary } from "./library.ts";
 import { findRoamLinks, textUnderPointer } from "./links.ts";
+import { moveSlide, presentationFrames, presentationRestoreState, slideCounter, slideKeyAction, type FrameLike, type PresentationStateKey, type SlideMove } from "./presentation.ts";
 import { insertImageChild, loadDrawing, openInMainWindow, openInSidebar, pageUidByTitle, saveDrawing } from "./roam.ts";
 import type { DrawingData } from "./schema.ts";
 import { getSettings } from "./settings.ts";
@@ -59,6 +61,7 @@ interface EditorProps {
   onSaved(uid: string): void;
   registerClose(fn: () => Promise<void>): void;
   registerApi(api: ExcalidrawImperativeAPI): void;
+  presentation: PresentationControl;
 }
 
 /** Keys of appState that must not be persisted: transient UI or unserialisable. */
@@ -96,7 +99,7 @@ function followLink(api: ExcalidrawImperativeAPI, state: PointerDownState, event
   else void closeEditor().then(() => openInMainWindow(target));
 }
 
-function EditorView({ uid, container, initial, onSaved, registerClose, registerApi }: EditorProps) {
+function EditorView({ uid, container, initial, onSaved, registerClose, registerApi, presentation }: EditorProps) {
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const lastSavedVersion = useRef<number>(getSceneVersion(initial.elements as never));
   // Excalidraw applies initialData asynchronously after mount and fires
@@ -154,7 +157,9 @@ function EditorView({ uid, container, initial, onSaved, registerClose, registerA
     const drawing: DrawingData = {
       instanceId: initial.instanceId,
       elements: elements as unknown[],
-      appState: serialisableState(api.getAppState() as unknown as Record<string, unknown>),
+      // During a Presentation the pre-Presentation view mode, zen mode, frame
+      // rendering and scroll/zoom are saved instead of the Presentation's own.
+      appState: serialisableState({ ...api.getAppState(), ...presentation.restoreState() } as unknown as Record<string, unknown>),
       files: filesToPersist(elements as unknown as ImageLikeElement[], { ...api.getFiles(), ...leftover }) as unknown as Record<string, unknown>,
       version: initial.version,
     };
@@ -206,7 +211,10 @@ function EditorView({ uid, container, initial, onSaved, registerClose, registerA
         });
       }}
       initialData={{ ...initialData, libraryItems: loadLibrary() } as never}
-      onChange={scheduleSave}
+      onChange={(elements) => {
+        presentation.sceneChanged(elements);
+        scheduleSave();
+      }}
       onLibraryChange={(items) => saveLibrary(items)}
       theme={theme}
       langCode={settings.langCode}
@@ -266,6 +274,137 @@ function fitBesideSidebar(container: HTMLElement): () => void {
   };
 }
 
+/** The Presentation of the open Editor: the Drawing's frames, one per slide, full screen. */
+interface PresentationControl {
+  /** Pre-Presentation appState to persist instead of the Presentation's own; null when not presenting. */
+  restoreState(): Pick<AppState, PresentationStateKey> | null;
+  /** True just after a Presentation ended, so the Escape that ended it cannot also close the Editor. */
+  swallowsEscape(): boolean;
+  sceneChanged(elements: readonly FrameLike[]): void;
+  start(): Promise<void>;
+  stop(): void;
+}
+
+/** Room around a frame when it is fitted to the screen, in screen pixels. */
+const SLIDE_MARGIN = 16;
+/** How long after a Presentation ends an Escape is still taken as the one that ended it. */
+const ESCAPE_GRACE_MS = 500;
+
+function createPresentation(container: HTMLElement, getApi: () => ExcalidrawImperativeAPI | null, button: HTMLButtonElement, counter: HTMLElement): PresentationControl {
+  let saved: Pick<AppState, PresentationStateKey> | null = null;
+  let index = 0;
+  let endedAt = -Infinity;
+  let hasFrames: boolean | null = null;
+  let refit: number | null = null;
+
+  const show = (move: SlideMove | null, animate: boolean) => {
+    const api = getApi();
+    if (!api || saved === null) return;
+    // Read the frames on every step: the scene is the only source of slides.
+    const frames = presentationFrames(api.getSceneElements());
+    if (frames.length === 0) return stop();
+    index = move ? moveSlide(index, frames.length, move) : Math.min(index, frames.length - 1);
+    api.setViewport({ target: frames[index], fit: "contain", animation: animate, offsets: { top: SLIDE_MARGIN, right: SLIDE_MARGIN, bottom: SLIDE_MARGIN, left: SLIDE_MARGIN } });
+    counter.textContent = slideCounter(index, frames.length);
+  };
+
+  // Every key aimed at the Presentation belongs to it: nothing reaches
+  // Excalidraw, Roam or the Editor's own Escape handler while it runs. Keys
+  // aimed elsewhere (Roam's sidebar when full screen was refused) pass untouched.
+  const onKeyDown = (event: KeyboardEvent) => {
+    const target = event.target as Node | null;
+    if (target && target !== document.body && !container.contains(target)) return;
+    event.stopImmediatePropagation();
+    const action = slideKeyAction(event.key);
+    if (!action || event.metaKey || event.ctrlKey || event.altKey) return;
+    event.preventDefault();
+    if (action === "leave") stop();
+    else show(action, true);
+  };
+
+  const onFullscreenChange = () => {
+    if (document.fullscreenElement !== container) stop();
+  };
+
+  // Hiding the bar, entering full screen or resizing the window changes the
+  // canvas size: fit the current frame again once Excalidraw has measured it.
+  const resize = new ResizeObserver(() => refitSoon());
+  const refitSoon = () => {
+    if (refit !== null) window.cancelAnimationFrame(refit);
+    refit = window.requestAnimationFrame(() => {
+      refit = window.requestAnimationFrame(() => {
+        refit = null;
+        show(null, false);
+      });
+    });
+  };
+
+  const stop = () => {
+    if (saved === null) return;
+    const restore = saved;
+    saved = null;
+    endedAt = performance.now();
+    window.removeEventListener("keydown", onKeyDown, true);
+    resize.disconnect();
+    document.removeEventListener("fullscreenchange", onFullscreenChange);
+    if (refit !== null) window.cancelAnimationFrame(refit);
+    refit = null;
+    container.classList.remove("bex-presenting");
+    counter.textContent = "";
+    const api = getApi();
+    if (api && !api.isDestroyed) {
+      // Synchronous, so the next read of appState (an autosave, the final
+      // save on close) already sees the restored values.
+      flushSync(() => {
+        api.setViewport(null);
+        api.updateScene({ appState: restore, captureUpdate: CaptureUpdateAction.NEVER });
+      });
+    }
+    if (document.fullscreenElement === container) void document.exitFullscreen().catch(() => {});
+    container.focus();
+  };
+
+  const start = async () => {
+    const api = getApi();
+    if (!api || saved !== null) return;
+    if (presentationFrames(api.getSceneElements()).length === 0) return;
+    saved = presentationRestoreState(api.getAppState());
+    index = 0;
+    container.classList.add("bex-presenting");
+    container.focus();
+    window.addEventListener("keydown", onKeyDown, true);
+    resize.observe(container);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    api.updateScene({
+      appState: { viewModeEnabled: true, zenModeEnabled: true, frameRendering: { enabled: true, name: false, outline: false, clip: true } },
+      captureUpdate: CaptureUpdateAction.NEVER,
+    });
+    counter.textContent = slideCounter(0, presentationFrames(api.getSceneElements()).length);
+    try {
+      await container.requestFullscreen();
+    } catch (error) {
+      // Without full screen the Presentation still runs inside the modal.
+      console.warn("[better-excalidraw] full screen refused", error);
+    }
+    // Left before full screen was granted: do not stay full screen without it.
+    if (saved === null && document.fullscreenElement === container) void document.exitFullscreen().catch(() => {});
+  };
+
+  return {
+    restoreState: () => saved,
+    swallowsEscape: () => saved !== null || performance.now() - endedAt < ESCAPE_GRACE_MS,
+    sceneChanged(elements) {
+      const next = presentationFrames(elements).length > 0;
+      if (next === hasFrames) return;
+      hasFrames = next;
+      button.disabled = !next;
+      button.title = next ? "Show this drawing's frames one at a time, full screen (Escape to leave)" : "Add a frame to the drawing to present it";
+    },
+    start,
+    stop,
+  };
+}
+
 export function isEditorOpen(): boolean {
   return active !== null;
 }
@@ -298,20 +437,29 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
   imageButton.textContent = "Insert as image";
   imageButton.title = "Upload a PNG of this drawing and add it as a child block";
   imageButton.onclick = () => void insertAsImage(uid, imageButton);
+  const presentButton = document.createElement("button");
+  presentButton.className = "bp3-button bp3-minimal";
+  presentButton.textContent = "Present";
   const closeButton = document.createElement("button");
   closeButton.className = "bp3-button bp3-minimal bex-modal-close";
   closeButton.textContent = "Save & close";
   closeButton.onclick = () => void closeEditor();
-  actions.append(imageButton, closeButton);
+  actions.append(presentButton, imageButton, closeButton);
   bar.append(title, actions);
 
   const canvas = document.createElement("div");
   canvas.className = "bex-modal-canvas";
-  container.append(bar, canvas);
+  const counter = document.createElement("div");
+  counter.className = "bex-presentation-counter";
+  counter.setAttribute("aria-live", "polite");
+  container.append(bar, canvas, counter);
   document.body.append(container);
 
   let flush: () => Promise<void> = async () => {};
   let editorApi: ExcalidrawImperativeAPI | null = null;
+  const presentation = createPresentation(container, () => editorApi, presentButton, counter);
+  presentation.sceneChanged(initial.elements as FrameLike[]);
+  presentButton.onclick = () => void presentation.start();
   const root = createRoot(canvas);
   root.render(
     <EditorView
@@ -325,13 +473,14 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
       registerApi={(api) => {
         editorApi = api;
       }}
+      presentation={presentation}
     />,
   );
 
   const unfit = fitBesideSidebar(container);
 
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && !event.defaultPrevented && event.target === container) {
+    if (event.key === "Escape" && !event.defaultPrevented && event.target === container && !presentation.swallowsEscape()) {
       void closeEditor();
     }
   };
@@ -345,6 +494,13 @@ export function openEditor(uid: string, handlers: EditorHandlers): void {
     close: async () => {
       unfit();
       container.removeEventListener("keydown", onKeyDown);
+      // Restores the pre-Presentation appState first, so the final save writes
+      // it; a failure here must not cost the final save.
+      try {
+        presentation.stop();
+      } catch (error) {
+        console.error("[better-excalidraw] leaving the presentation failed", uid, error);
+      }
       await flush();
       root.unmount();
       container.remove();
