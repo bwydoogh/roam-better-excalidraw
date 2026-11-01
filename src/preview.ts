@@ -1,6 +1,6 @@
 // Inline read-only Preview of a Drawing block: an SVG exported from the scene,
 // cached per block so a page full of drawings renders each one once.
-import { exportToSvg } from "@excalidraw/excalidraw";
+import { exportScene } from "@excalidraw/excalidraw";
 import type { DrawingData } from "./schema.ts";
 import { resolveFiles, type ImageLikeElement } from "./files.ts";
 import { parseOptions } from "./blockString.ts";
@@ -24,6 +24,19 @@ function sceneKey(drawing: DrawingData, theme: string): string {
 }
 
 /**
+ * The export's frame decorations, following the drawing's own
+ * `appState.frameRendering` the way the old `exportToSvg`/`exportToBlob` did.
+ * Undefined when the appState has none, so `exportScene` keeps its default.
+ */
+export function exportFrames(appState: unknown): { name: boolean; outline: boolean; clip: boolean } | undefined {
+  const fr = (appState as { frameRendering?: { enabled?: boolean; name?: boolean; outline?: boolean; clip?: boolean } } | undefined)
+    ?.frameRendering;
+  if (!fr || typeof fr !== "object") return undefined;
+  if (fr.enabled === false) return { name: false, outline: false, clip: false };
+  return { name: fr.name !== false, outline: fr.outline !== false, clip: fr.clip !== false };
+}
+
+/**
  * Exports a scene to an SVG, resolving any stored images first. Pure of the
  * per-block cache, so the Gallery can render thumbnails through the same path.
  * Returns null for a scene with no visible elements.
@@ -33,16 +46,17 @@ export async function renderSceneSvg(drawing: DrawingData, theme: "light" | "dar
   if (live.length === 0) return null;
   const stored = drawing.files as never;
   const files = { ...(drawing.files as object), ...(await resolveFiles(live as ImageLikeElement[], stored)) };
-  return exportToSvg({
-    elements: live as never,
-    appState: {
-      ...(drawing.appState as object),
-      exportWithDarkMode: theme === "dark",
-      exportBackground: false,
+  const exportScale = (drawing.appState as { exportScale?: unknown } | undefined)?.exportScale;
+  return exportScene({
+    type: "svg",
+    data: { elements: live as never, appState: drawing.appState as never, files: files as never },
+    config: {
       theme,
-    } as never,
-    files: files as never,
-    exportPadding: 16,
+      canvasBackgroundColor: false,
+      padding: 16,
+      frames: exportFrames(drawing.appState),
+      ...(typeof exportScale === "number" && exportScale > 0 ? { scale: exportScale } : {}),
+    },
   });
 }
 

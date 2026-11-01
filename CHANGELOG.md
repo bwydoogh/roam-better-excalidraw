@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Excalidraw bumped to nightly 0.18.0-4ce8305 (2026-10-27), which replaces
+  `exportToSvg`/`exportToBlob` with `exportScene`; Preview and "Insert as
+  image" moved over, keeping frame rendering and export scale but no longer
+  embedding the scene in the exported image. Dev tooling: esbuild 0.28,
+  TypeScript 7.
 - Excalidraw bumped to nightly 0.18.0-afa3a65 (2026-09-10): sticky notes and
   five months of upstream fixes. Convert-back-to-native warns when a drawing
   uses element types Roam's built-in renderer does not know.

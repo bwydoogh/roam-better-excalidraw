@@ -1,6 +1,6 @@
 // The Editor: a full-size modal hosting Excalidraw, autosaving to the block.
 // At most one Editor is open at a time; opening a second focuses the first.
-import { CaptureUpdateAction, Excalidraw, exportToBlob, getSceneVersion, restoreAppState, restoreElements } from "@excalidraw/excalidraw";
+import { CaptureUpdateAction, Excalidraw, exportScene, getSceneVersion, restoreAppState, restoreElements } from "@excalidraw/excalidraw";
 import type { AppState, ExcalidrawImperativeAPI, PointerDownState } from "@excalidraw/excalidraw/types";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
@@ -9,6 +9,7 @@ import { filesToPersist, resolveFiles, uploadPendingFiles, type ImageLikeElement
 import { loadLibrary, saveLibrary } from "./library.ts";
 import { findRoamLinks, textUnderPointer } from "./links.ts";
 import { moveSlide, presentationFrames, presentationRestoreState, slideCounter, slideKeyAction, type FrameLike, type PresentationStateKey, type SlideMove } from "./presentation.ts";
+import { exportFrames } from "./preview.ts";
 import { insertImageChild, loadDrawing, openInMainWindow, openInSidebar, pageUidByTitle, saveDrawing } from "./roam.ts";
 import type { DrawingData } from "./schema.ts";
 import { getSettings } from "./settings.ts";
@@ -27,13 +28,11 @@ async function insertAsImage(uid: string, button: HTMLButtonElement): Promise<vo
   if (!api || active?.uid !== uid) return;
   button.disabled = true;
   try {
-    const blob = await exportToBlob({
-      elements: api.getSceneElements(),
-      appState: { ...api.getAppState(), exportBackground: true, exportWithDarkMode: false },
-      files: api.getFiles(),
-      mimeType: "image/png",
-      exportPadding: 16,
-      getDimensions: (w: number, h: number) => ({ width: w * 2, height: h * 2, scale: 2 }),
+    const appState = api.getAppState();
+    const blob = await exportScene({
+      type: "png",
+      data: { elements: api.getSceneElements(), appState, files: api.getFiles() },
+      config: { theme: "light", padding: 16, scale: 2, frames: exportFrames(appState) },
     });
     await insertImageChild(uid, blob);
     button.textContent = "Image inserted";
